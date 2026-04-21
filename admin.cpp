@@ -770,6 +770,166 @@ public:
     }
 };
 
+
+
+class HocSinh : public Person {
+private:
+    string lop;
+    double diem;
+    string maGV;
+
+public:
+    HocSinh(string ma, string u, string p, string ten,
+            string lop, double diem, string maGV)
+        : Person(ma,u,p,ten), lop(lop), diem(diem), maGV(maGV) {}
+
+    string layMaGV() const { return maGV; }
+    double layDiem() const { return diem; }
+
+    void datDiem(double d) { diem = d; }
+
+    string layVaiTro() const override { return "HocSinh"; }
+
+    void hienThiThongTin() const override {
+        cout << "[HS] " << hoTen
+             << " | Lop: " << lop
+             << " | Diem: " << diem << endl;
+    }
+
+    string chuyenThanhChuoiFile() const override {
+        return "HS|" + ma + "|" + tenDangNhap + "|" + matKhau + "|" +
+               hoTen + "|" + lop + "|" + to_string(diem) + "|" + maGV;
+    }
+};
+
+// ================= GIAO VIEN =================
+class GiaoVien : public Person {
+private:
+    string mon;
+
+public:
+    GiaoVien(string ma, string u, string p, string ten, string mon)
+        : Person(ma,u,p,ten), mon(mon) {}
+
+    string layVaiTro() const override { return "GiaoVien"; }
+
+    void hienThiThongTin() const override {
+        cout << "[GV] " << hoTen << " | Mon: " << mon << endl;
+    }
+
+    string chuyenThanhChuoiFile() const override {
+        return "GV|" + ma + "|" + tenDangNhap + "|" + matKhau + "|" + hoTen + "|" + mon;
+    }
+
+    void datLaiMatKhau() {
+        string mk;
+        cout << "Nhap MK moi: ";
+        getline(cin, mk);
+        datMatKhau(mk);
+    }
+
+    void xemHocSinh(Node* head) {
+        Node* temp = head;
+        while (temp) {
+            HocSinh* hs = dynamic_cast<HocSinh*>(temp->data);
+            if (hs && hs->layMaGV() == ma)
+                hs->hienThiThongTin();
+            temp = temp->next;
+        }
+    }
+
+    void thongKe(Node* head) {
+        double tong = 0;
+        int dem = 0;
+
+        Node* temp = head;
+        while (temp) {
+            HocSinh* hs = dynamic_cast<HocSinh*>(temp->data);
+            if (hs && hs->layMaGV() == ma) {
+                tong += hs->layDiem();
+                dem++;
+            }
+            temp = temp->next;
+        }
+
+        if (dem)
+            cout << "Diem TB: " << tong/dem << endl;
+        else
+            cout << "Khong co du lieu!\n";
+    }
+
+    void sapXepDiem(Node*& head) {
+        for (Node* i = head; i; i = i->next) {
+            for (Node* j = i->next; j; j = j->next) {
+                HocSinh* a = dynamic_cast<HocSinh*>(i->data);
+                HocSinh* b = dynamic_cast<HocSinh*>(j->data);
+
+                if (a && b && a->layDiem() < b->layDiem()) {
+                    swap(i->data, j->data);
+                }
+            }
+        }
+
+        cout << "Sau sap xep:\n";
+        xemHocSinh(head);
+    }
+};
+
+// ================= ADMIN =================
+class Admin : public Person {
+public:
+    Admin(string ma, string u, string p, string ten)
+        : Person(ma,u,p,ten) {}
+
+    string layVaiTro() const override { return "Admin"; }
+
+    void hienThiThongTin() const override {
+        cout << "[ADMIN] " << hoTen << endl;
+    }
+
+    string chuyenThanhChuoiFile() const override {
+        return "AD|" + ma + "|" + tenDangNhap + "|" + matKhau + "|" + hoTen;
+    }
+};
+
+// ================= QUAN LY =================
+class QuanLy {
+private:
+    Node* head = NULL;
+
+public:
+    void them(Person* p) {
+        Node* node = new Node{p, NULL};
+        if (!head) head = node;
+        else {
+            Node* temp = head;
+            while (temp->next) temp = temp->next;
+            temp->next = node;
+        }
+    }
+
+    Person* dangNhap() {
+        string u,p;
+        cout << "User: "; cin >> u;
+        cout << "Pass: "; cin >> p;
+        cin.ignore();
+
+        Node* temp = head;
+        while (temp) {
+            if (temp->data->layTenDangNhap() == u &&
+                temp->data->layMatKhau() == p)
+                return temp->data;
+            temp = temp->next;
+        }
+        return NULL;
+    }
+
+    Node* layDanhSach() { return head; }
+};
+
+
+
+
 // ========================== MAIN ==========================
 int main() {
     AdminSystem system;
