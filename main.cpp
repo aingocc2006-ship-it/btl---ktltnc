@@ -39,19 +39,6 @@ void SetColor(int color)
 #define LIGHT_YELLOW 14
 #define BRIGHT_WHITE 15
 
-// ========================== SAFE PARSING FUNCTIONS ==========================
-int safeStoi(const string& s, int defaultVal = 0) {
-    if (s.empty()) return defaultVal;
-    try { return stoi(s); }
-    catch (...) { return defaultVal; }
-}
-
-double safeStod(const string& s, double defaultVal = 0.0) {
-    if (s.empty()) return defaultVal;
-    try { return stod(s); }
-    catch (...) { return defaultVal; }
-}
-
 void VeKhungTieuDe(string tieuDe, int mau)
 {
     int len = tieuDe.length() + 4;
@@ -71,12 +58,11 @@ void VeKhungTieuDe(string tieuDe, int mau)
     cout << "╝" << endl;
     SetColor(WHITE);
 }
-
 //======Tai file======
 string taiFile()
 {
     OPENFILENAMEW ofn;
-    WCHAR szFile[260] = { 0 };
+    WCHAR szFile[260] = {0};
     ZeroMemory(&ofn, sizeof(ofn));
 
     ofn.lStructSize = sizeof(ofn);
@@ -91,6 +77,7 @@ string taiFile()
 
     if (GetOpenFileNameW(&ofn))
     {
+        // Convert wide string to narrow string
         char buffer[260];
         WideCharToMultiByte(CP_UTF8, 0, szFile, -1, buffer, sizeof(buffer), NULL, NULL);
         return string(buffer);
@@ -108,7 +95,7 @@ struct CauHoi
 };
 
 //===================== Ham Nhap ==========================
-string inputLine(const string& prompt)
+string inputLine(const string &prompt)
 {
     string s;
     while (true)
@@ -122,7 +109,7 @@ string inputLine(const string& prompt)
 }
 
 template <typename T>
-T nhapSo(const string& thongBao)
+T nhapSo(const string &thongBao)
 {
     T value;
     while (true)
@@ -139,7 +126,7 @@ T nhapSo(const string& thongBao)
     }
 }
 
-time_t parseDateTime(const string& s)
+time_t parseDateTime(const string &s)
 {
     tm tmVal = {};
     int year, month, day, hour, minute;
@@ -168,7 +155,7 @@ string formatDateTime(time_t t)
     return string(buffer);
 }
 
-string hashPassword(const string& raw)
+string hashPassword(const string &raw)
 {
     return raw;
 }
@@ -187,13 +174,12 @@ struct deThi
     time_t batDau;
     time_t ketThuc;
     bool locked;
-    vector<string> dsLopDuocThi;
-    int soLanOnTap;
+    vector<string> dsLopDuocThi; // Lưu danh sách tên lớp được phép thi
+    int soLanOnTap;              // -1 = không giới hạn, >0 = giới hạn số lần
 
     deThi() : id(0), khoa(0), tenMon(""), thoiGianLamBai(0),
-        loaiThi(1), phongThiId(0), batDau(0), ketThuc(0),
-        locked(false), soLanOnTap(-1) {
-    }
+              loaiThi(1), phongThiId(0), batDau(0), ketThuc(0),
+              locked(false), soLanOnTap(-1) {}
 
     void themCauHoi()
     {
@@ -214,7 +200,7 @@ struct deThi
 
     void hienThiCauHoi()
     {
-        for (auto& ch : danhSachCauHoi)
+        for (auto &ch : danhSachCauHoi)
         {
             cout << ch.id << ". " << ch.noiDung << endl;
         }
@@ -258,11 +244,10 @@ struct ClassInfo
 {
     int id;
     string className;
-    int coVanHocTapId;
-    vector<int> danhSachGiangVien;
-    int studentCount;
+    int coVanHocTapId;             // Thay cho teacherId cũ (1 Cố vấn học tập)
+    vector<int> danhSachGiangVien; // Danh sách nhiều giáo viên giảng dạy
     int teacherId;
-    ClassInfo() : id(0), className(""), coVanHocTapId(0), studentCount(0), teacherId(0) {}
+    int studentCount;
 };
 
 struct PhongThi
@@ -287,7 +272,7 @@ protected:
 public:
     Person() : id(0), username(""), password(""), fullName("") {}
 
-    Person(int id, const string& username, const string& password, const string& fullName)
+    Person(int id, const string &username, const string &password, const string &fullName)
         : id(id), username(username), password(password), fullName(fullName)
     {
     }
@@ -295,7 +280,7 @@ public:
     virtual ~Person() {}
     virtual string getRole() const = 0;
 
-    virtual bool login(const string& u, const string& p) const
+    virtual bool login(const string &u, const string &p) const
     {
         return u == username && (password == p || password == hashPassword(p));
     }
@@ -305,9 +290,9 @@ public:
     string getPassword() const { return password; }
     string getFullName() const { return fullName; }
     void setId(int newId) { id = newId; }
-    void setUsername(const string& newUsername) { username = newUsername; }
-    void setPassword(const string& newPassword) { password = newPassword; }
-    void setFullName(const string& newFullName) { fullName = newFullName; }
+    void setUsername(const string &newUsername) { username = newUsername; }
+    void setPassword(const string &newPassword) { password = newPassword; }
+    void setFullName(const string &newFullName) { fullName = newFullName; }
 };
 
 // ========================== ADMIN ==========================
@@ -346,25 +331,31 @@ private:
 public:
     void saveDeThi() const;
     void loadDeThi();
-    const vector<deThi>& getMaDe() const { return maDe; }
+    const vector<deThi> &getMaDe() const { return maDe; }
     QuanLyThi()
     {
         maDe = {};
         tenMon = "Chua dat ten";
     }
 
-    void thietLapDeThi(int teacherId, string monGiangVien, const vector<ClassInfo>& classes, const vector<PhongThi>& examRooms)
+    void thietLapDeThi(int teacherId, string monGiangVien, const vector<ClassInfo> &classes, const vector<PhongThi> &examRooms)
     {
+        // 1. Loại bài thi TRƯỚC TIÊN
         do
         {
             de.loaiThi = nhapSo<int>("Loai bai thi (1. Chinh thuc | 2. On tap): ");
         } while (de.loaiThi != 1 && de.loaiThi != 2);
 
-        de.tenMon = monGiangVien;
-        do {
+        // 2. Tên môn
+        cout << "Ten mon hoc: ";
+        getline(cin, de.tenMon);
+
+        // 3. Mã đề — kiểm tra trùng
+        do
+        {
             de.id = nhapSo<int>("Ma de: ");
             bool trung = false;
-            for (const auto& d : maDe)
+            for (const auto &d : maDe)
             {
                 if (d.id == de.id)
                 {
@@ -382,8 +373,10 @@ public:
                 break;
         } while (true);
 
+        // 4. Thời gian làm bài
         de.thoiGianLamBai = nhapSo<int>("Thoi gian lam bai (giay): ");
 
+        // 5. Phòng thi — CHỈ yêu cầu nếu Chính thức
         if (de.loaiThi == 1)
         {
             if (examRooms.empty())
@@ -397,7 +390,7 @@ public:
             do
             {
                 de.phongThiId = nhapSo<int>("Nhap ID phong thi: ");
-                for (const auto& r : examRooms)
+                for (const auto &r : examRooms)
                 {
                     if (r.id == de.phongThiId)
                     {
@@ -413,7 +406,7 @@ public:
                 }
             } while (!validRoom);
         }
-        else
+        else // loaiDeThi == 2
         {
             de.phongThiId = 0;
             de.batDau = 0;
@@ -437,6 +430,7 @@ public:
             }
         }
 
+        // 6. Lịch thi — CHỈ yêu cầu nếu Chính thức
         if (de.loaiThi == 1)
         {
             do
@@ -460,10 +454,11 @@ public:
         }
         else
         {
-            de.batDau = 0;
+            de.batDau = 0; // Ôn tập luôn available
             de.ketThuc = 0;
         }
 
+        // 7. Phân quyền lớp - TỰ ĐỘNG THEO CHUYÊN NGÀNH
         de.dsLopDuocThi.clear();
         SetColor(LIGHT_CYAN);
         cout << "\nDang tu dong phan quyen thi cho cac lop cung chuyen nganh...\n";
@@ -471,21 +466,16 @@ public:
 
         bool hasClass = false;
 
-        for (const auto& c : classes)
+        for (const auto &c : classes)
         {
             bool duocGiangDay = false;
-            for (int gvId : c.danhSachGiangVien)
-            {
-                if (gvId == teacherId)
-                {
-                    duocGiangDay = true;
-                    break;
-                }
-            }
+
+            // Cách 2: Kiểm tra theo tên lớp + môn giảng viên (mới - ưu tiên)
             if (!duocGiangDay && !monGiangVien.empty() && !c.className.empty())
             {
+                // Ví dụ: Giảng viên CNTT → cho phép CNTT01, CNTT02, CNTT03...
                 if (c.className.find(monGiangVien) == 0 ||
-                    c.className.rfind(monGiangVien, 0) == 0)
+                    c.className.rfind(monGiangVien, 0) == 0) // Bắt đầu bằng môn
                 {
                     duocGiangDay = true;
                 }
@@ -506,9 +496,10 @@ public:
             SetColor(YELLOW);
             cout << "Khong tim thay lop nao phu trach. De thi se mo cho toan truong (ALL).\n";
             SetColor(WHITE);
-            de.dsLopDuocThi.clear();
+            de.dsLopDuocThi.clear(); // ALL
         }
 
+        // 8. Câu hỏi
         de.locked = false;
         int m = nhapSo<int>("Nhap so cau hoi cua de: ");
         de.danhSachCauHoi.clear();
@@ -530,7 +521,7 @@ public:
     void khoaMoDeThi()
     {
         int idDe = nhapSo<int>("Nhap Ma De can khoa/mo: ");
-        for (auto& d : maDe)
+        for (auto &d : maDe)
         {
             if (d.id == idDe)
             {
@@ -553,20 +544,20 @@ public:
         SetColor(CYAN);
         cout << "\n===== LICH THI =====\n";
         SetColor(WHITE);
-        for (const auto& d : maDe)
+        for (const auto &d : maDe)
         {
             cout << "Ma de: " << d.id
-                << " | Mon: " << d.tenMon
-                << " | Phong: " << d.phongThiId
-                << " | Lich: " << d.getSchedule()
-                << " | Trang thai: " << (d.locked ? "Khoa" : (d.isAvailable() ? "Dang mo" : "Chua den gio/da ket thuc"))
-                << "\n";
+                 << " | Mon: " << d.tenMon
+                 << " | Phong: " << d.phongThiId
+                 << " | Lich: " << d.getSchedule()
+                 << " | Trang thai: " << (d.locked ? "Khoa" : (d.isAvailable() ? "Dang mo" : "Chua den gio/da ket thuc"))
+                 << "\n";
         }
     }
 
-    deThi* timDeThi(int id)
+    deThi *timDeThi(int id)
     {
-        for (auto& d : maDe)
+        for (auto &d : maDe)
         {
             if (d.id == id)
                 return &d;
@@ -574,9 +565,9 @@ public:
         return nullptr;
     }
 
-    const deThi* timDeThi(int id) const
+    const deThi *timDeThi(int id) const
     {
-        for (const auto& d : maDe)
+        for (const auto &d : maDe)
         {
             if (d.id == id)
                 return &d;
@@ -587,7 +578,7 @@ public:
     void suaCauHoi()
     {
         int idDe = nhapSo<int>("Nhap Ma De can sua: ");
-        for (auto& d : maDe)
+        for (auto &d : maDe)
         {
             if (d.id == idDe)
             {
@@ -600,7 +591,7 @@ public:
                     return;
                 }
                 int idCH = nhapSo<int>("Nhap ID cau hoi can sua: ");
-                for (auto& ch : d.danhSachCauHoi)
+                for (auto &ch : d.danhSachCauHoi)
                 {
                     if (ch.id == idCH)
                     {
@@ -636,14 +627,14 @@ public:
     void xoaCauHoi()
     {
         int idDe = nhapSo<int>("Nhap Ma De can xoa cau hoi: ");
-        for (auto& d : maDe)
+        for (auto &d : maDe)
         {
             if (d.id == idDe)
             {
                 d.hienThiCauHoi();
                 int idCH = nhapSo<int>("Nhap ID cau hoi can xoa: ");
-                auto it = remove_if(d.danhSachCauHoi.begin(), d.danhSachCauHoi.end(), [idCH](const CauHoi& c)
-                    { return c.id == idCH; });
+                auto it = remove_if(d.danhSachCauHoi.begin(), d.danhSachCauHoi.end(), [idCH](const CauHoi &c)
+                                    { return c.id == idCH; });
                 if (it != d.danhSachCauHoi.end())
                 {
                     d.danhSachCauHoi.erase(it, d.danhSachCauHoi.end());
@@ -666,7 +657,7 @@ public:
         SetColor(WHITE);
     }
 
-    void menu(int teacherId, string monGiangVien, const vector<ClassInfo>& classes, const vector<PhongThi>& examRooms)
+    void menu(int teacherId, string monGiangVien, const vector<ClassInfo> &classes, const vector<PhongThi> &examRooms)
     {
         int ch;
         do
@@ -686,23 +677,23 @@ public:
                 xoaCauHoi();
                 break;
             case 4:
-                for (const auto& d : maDe)
+                for (const auto &d : maDe)
                 {
                     string loai = (d.loaiThi == 1) ? "[Chinh thuc]" : "[On tap]";
                     string soLan = "";
                     if (d.loaiThi == 2)
                     {
                         soLan = (d.soLanOnTap == -1)
-                            ? " | So lan: Khong gioi han"
-                            : " | So lan: " + to_string(d.soLanOnTap);
+                                    ? " | So lan: Khong gioi han"
+                                    : " | So lan: " + to_string(d.soLanOnTap);
                     }
                     cout << "Ma de: " << d.id
-                        << " | Mon: " << d.tenMon
-                        << " " << loai
-                        << soLan
-                        << " | Thoi gian: " << d.thoiGianLamBai << "s"
-                        << " | Trang thai: " << (d.locked ? "Khoa" : "Mo")
-                        << endl;
+                         << " | Mon: " << d.tenMon
+                         << " " << loai
+                         << soLan
+                         << " | Thoi gian: " << d.thoiGianLamBai << "s"
+                         << " | Trang thai: " << (d.locked ? "Khoa" : "Mo")
+                         << endl;
                 }
                 break;
             case 5:
@@ -719,13 +710,13 @@ public:
 void QuanLyThi::saveDeThi() const
 {
     ofstream fout("dethi.txt");
-    for (const auto& de : maDe)
+    for (const auto &de : maDe)
     {
         fout << de.id << '|' << de.tenMon << '|' << de.thoiGianLamBai << '|'
-            << de.loaiThi << '|' << de.danhSachCauHoi.size()
-            << '|' << de.phongThiId << '|' << formatDateTime(de.batDau)
-            << '|' << formatDateTime(de.ketThuc) << '|' << (de.locked ? 1 : 0)
-            << '|' << de.soLanOnTap << '|';
+             << de.loaiThi << '|' << de.danhSachCauHoi.size()
+             << '|' << de.phongThiId << '|' << formatDateTime(de.batDau)
+             << '|' << formatDateTime(de.ketThuc) << '|' << (de.locked ? 1 : 0)
+             << '|' << de.soLanOnTap << '|';
 
         for (size_t i = 0; i < de.dsLopDuocThi.size(); i++)
         {
@@ -735,7 +726,7 @@ void QuanLyThi::saveDeThi() const
             fout << "ALL";
         fout << '\n';
 
-        for (const auto& ch : de.danhSachCauHoi)
+        for (const auto &ch : de.danhSachCauHoi)
         {
             fout << ch.id << '|' << ch.noiDung << '|' << ch.dapAn[0] << '|' << ch.dapAn[1] << '|' << ch.dapAn[2] << '|' << ch.dapAn[3] << '|' << ch.dapAnDung << '\n';
         }
@@ -747,75 +738,112 @@ void QuanLyThi::loadDeThi()
 {
     maDe.clear();
     ifstream fin("dethi.txt");
-    if (!fin) return;
+    if (!fin)
+    {
+        cout << "Khong tim thay file dethi.txt\n";
+        return;
+    }
+
     string line;
+    int lineNum = 0;
+
     while (getline(fin, line))
     {
-        if (!line.empty() && line.back() == '\r') line.pop_back();
-        if (line.empty()) continue;
+        lineNum++;
+        if (!line.empty() && line.back() == '\r')
+            line.pop_back();
+        if (line.empty() || line.find('|') == string::npos)
+            continue;
+
         stringstream ss(line);
-        vector<string> tokens; string token;
-        while (getline(ss, token, '|')) tokens.push_back(token);
-
-        if (tokens.size() < 7) continue;
-
         deThi de;
-        de.id = safeStoi(tokens[0]);
-        de.tenMon = tokens[1];
-        de.thoiGianLamBai = safeStoi(tokens[2]);
-        de.loaiThi = safeStoi(tokens[3]);
-        int soCau = safeStoi(tokens[4]);
-        de.phongThiId = safeStoi(tokens[5]);
 
-        string dsLopStr = "";
+        string idStr, tgStr, loaiStr, soCauStr, phongThiStr,
+            batDauStr, ketThucStr, lockedStr, soLanStr, dsLopStr;
 
-        if (tokens.size() >= 11) {
-            de.batDau = tokens[6].empty() ? 0 : parseDateTime(tokens[6]);
-            de.ketThuc = tokens[7].empty() ? 0 : parseDateTime(tokens[7]);
-            de.locked = (tokens[8] == "1");
-            de.soLanOnTap = safeStoi(tokens[9], -1);
-            dsLopStr = tokens[10];
-        }
-        else if (tokens.size() == 10) {
-            de.batDau = tokens[6].empty() ? 0 : parseDateTime(tokens[6]);
-            de.ketThuc = tokens[7].empty() ? 0 : parseDateTime(tokens[7]);
-            de.locked = (tokens[8] == "1");
-            de.soLanOnTap = -1;
-            dsLopStr = tokens[9];
-        }
-        else {
-            de.batDau = 0; de.ketThuc = 0; de.locked = false; de.soLanOnTap = -1;
-            if (tokens.size() > 6) dsLopStr = tokens[6];
-        }
+        getline(ss, idStr, '|');
+        getline(ss, de.tenMon, '|');
+        getline(ss, tgStr, '|');
+        getline(ss, loaiStr, '|');
+        getline(ss, soCauStr, '|');
+        getline(ss, phongThiStr, '|');
+        getline(ss, batDauStr, '|');
+        getline(ss, ketThucStr, '|');
+        getline(ss, lockedStr, '|');
+        getline(ss, soLanStr, '|');
+        getline(ss, dsLopStr);
 
-        if (dsLopStr != "ALL" && !dsLopStr.empty())
+        // Bỏ qua dòng không hợp lệ
+        if (idStr.empty() || de.tenMon.empty() || soCauStr.empty())
         {
-            stringstream ssLop(dsLopStr);
-            string tenLop;
-            while (getline(ssLop, tenLop, ',')) de.dsLopDuocThi.push_back(tenLop);
+            continue;
         }
 
-        for (int i = 0; i < soCau; i++)
+        try
         {
-            if (!getline(fin, line)) break;
-            if (!line.empty() && line.back() == '\r') line.pop_back();
-            stringstream s2(line);
-            vector<string> chTk; string c;
-            while (getline(s2, c, '|')) chTk.push_back(c);
-            if (chTk.size() < 7) continue;
+            de.id = stoi(idStr);
+            de.thoiGianLamBai = stoi(tgStr);
+            de.loaiThi = stoi(loaiStr);
+            de.phongThiId = phongThiStr.empty() ? 0 : stoi(phongThiStr);
+            de.batDau = batDauStr.empty() ? 0 : parseDateTime(batDauStr);
+            de.ketThuc = ketThucStr.empty() ? 0 : parseDateTime(ketThucStr);
+            de.locked = (lockedStr == "1");
+            de.soLanOnTap = soLanStr.empty() ? -1 : stoi(soLanStr);
 
-            CauHoi ch;
-            ch.id = safeStoi(chTk[0]);
-            ch.noiDung = chTk[1];
-            ch.dapAn[0] = chTk[2];
-            ch.dapAn[1] = chTk[3];
-            ch.dapAn[2] = chTk[4];
-            ch.dapAn[3] = chTk[5];
-            ch.dapAnDung = safeStoi(chTk[6]);
-            de.danhSachCauHoi.push_back(ch);
+            // Xử lý danh sách lớp
+            if (dsLopStr != "ALL" && !dsLopStr.empty())
+            {
+                stringstream ssLop(dsLopStr);
+                string lop;
+                while (getline(ssLop, lop, ','))
+                {
+                    if (!lop.empty())
+                        de.dsLopDuocThi.push_back(lop);
+                }
+            }
+
+            // Đọc câu hỏi
+            int soCau = stoi(soCauStr);
+            for (int i = 0; i < soCau; i++)
+            {
+                if (!getline(fin, line))
+                    break;
+                if (!line.empty() && line.back() == '\r')
+                    line.pop_back();
+                if (line.empty())
+                {
+                    i--;
+                    continue;
+                }
+
+                stringstream s2(line);
+                CauHoi ch;
+                string idCH, dapAnDungStr;
+
+                getline(s2, idCH, '|');
+                getline(s2, ch.noiDung, '|');
+                getline(s2, ch.dapAn[0], '|');
+                getline(s2, ch.dapAn[1], '|');
+                getline(s2, ch.dapAn[2], '|');
+                getline(s2, ch.dapAn[3], '|');
+                getline(s2, dapAnDungStr);
+
+                if (!idCH.empty() && !dapAnDungStr.empty())
+                {
+                    ch.id = stoi(idCH);
+                    ch.dapAnDung = stoi(dapAnDungStr);
+                    de.danhSachCauHoi.push_back(ch);
+                }
+            }
+
+            maDe.push_back(de);
         }
-        maDe.push_back(de);
+        catch (const exception &e)
+        {
+            cout << e.what() << endl;
+        }
     }
+
     fin.close();
 }
 
@@ -843,23 +871,21 @@ public:
     }
 
     SinhVien(int id, string userN, string passW, string ten,
-        string lop, string gioitinh, string birthDay, string sdt, double diemTB, int teacherId)
+             string lop, string gioitinh, string birthDay, string sdt, double diemTB, int teacherId)
         : Person(id, userN, passW, ten), lop(lop), gioitinh(gioitinh), birthDay(birthDay), sdt(sdt), diemTB(diemTB), teacherId(teacherId)
     {
     }
-
-    bool kiemTraLopDuocThi(const deThi& de) const
+    bool kiemTraLopDuocThi(const deThi &de) const
     {
         if (de.dsLopDuocThi.empty())
-            return true;
-        for (const string& l : de.dsLopDuocThi)
+            return true; // Áp dụng toàn trường
+        for (const string &l : de.dsLopDuocThi)
         {
             if (l == this->lop)
                 return true;
         }
         return false;
     }
-
     string getRole() const override { return "SinhVien"; }
     string getLop() const { return lop; }
     string getGioiTinh() const { return gioitinh; }
@@ -869,90 +895,71 @@ public:
     double layDiem() const { return diemTB; }
 
     void datDiem(double d) { diemTB = d; }
-    void setLop(const string& lop) { this->lop = lop; }
-    void setGioiTinh(const string& gioitinh) { this->gioitinh = gioitinh; }
-    void setBirthDay(const string& birthDay) { this->birthDay = birthDay; }
-    void setSdt(const string& sdt) { this->sdt = sdt; }
+    void setLop(const string &lop) { this->lop = lop; }
+    void setGioiTinh(const string &gioitinh) { this->gioitinh = gioitinh; }
+    void setBirthDay(const string &birthDay) { this->birthDay = birthDay; }
+    void setSdt(const string &sdt) { this->sdt = sdt; }
     void setDiemTB(double diemTB) { this->diemTB = diemTB; }
     void setTeacherId(int teacherId) { this->teacherId = teacherId; }
-    void setDanhSachKetQua(const vector<KetQua>& ds) { danhSachKetQua = ds; }
-    const vector<KetQua>& getDanhSachKetQua() const { return danhSachKetQua; }
+    void setDanhSachKetQua(const vector<KetQua> &ds) { danhSachKetQua = ds; }
+    const vector<KetQua> &getDanhSachKetQua() const { return danhSachKetQua; }
 
     void hienThiThongTin() const
     {
-        cout << "========== Thong Tin Sinh Vien ==========\n"
-            << "[HS] " << fullName << " | Lop: " << lop << " | Gioi tinh: " << gioitinh
-            << " | Ngay sinh: " << birthDay << " | SDT: " << sdt << " | Diem TB: " << diemTB
-            << " | TeacherID: " << teacherId << endl;
+        cout << "==========Thong Tin Sinh Vien===========\n"
+             << "[HS] " << fullName << " | Lop: " << lop << " | Gioi tinh: " << gioitinh
+             << " | Birth: " << birthDay << " | SDT: " << sdt << " | Diem TB: " << diemTB
+             << " | TeacherID: " << teacherId << endl;
     }
 
-    void xemDanhSachDe(QuanLyThi& thi, int loaiBai)
+    void thongKeDiemTB()
     {
-        SetColor(LIGHT_CYAN);
-        cout << (loaiBai == 1 ? "\n--- DANH SACH BAI THI CHINH THUC ---\n" : "\n--- DANH SACH BAI ON TAP ---\n");
-        SetColor(WHITE);
-
-        bool coBai = false;
-
-        for (const auto& de : thi.getMaDe())
+        double tong = 0;
+        int dem = 0;
+        for (const auto &kq : danhSachKetQua)
         {
-            if (!kiemTraLopDuocThi(de) || de.loaiThi != loaiBai)
+            if (kq.loaiThi == 1)
+            {
+                tong += kq.diem;
+                dem++;
+            }
+        }
+        if (dem == 0)
+        {
+            cout << "Chua co diem chinh thuc nao!\n";
+            return;
+        }
+        cout << "Diem TB (Chinh thuc): " << tong / dem << "\n";
+    }
+
+    void xemDanhSachOnTap(QuanLyThi &thi)
+    {
+        cout << "\n===== DANH SACH DE ON TAP =====\n";
+        for (const auto &de : thi.getMaDe())
+        {
+            if (!kiemTraLopDuocThi(de))
                 continue;
-
-            bool daThiChinhThuc = false;
-            if (de.loaiThi == 1)
+            if (de.loaiThi == 2)
             {
-                for (const auto& kq : danhSachKetQua)
-                {
-                    if (kq.maDe == de.id && kq.loaiThi == 1)
-                    {
-                        daThiChinhThuc = true;
-                        break;
-                    }
-                }
+                cout << "Ma de: " << de.id << " | Mon: " << de.tenMon
+                     << " | Thoi gian: " << de.thoiGianLamBai << " giay\n";
             }
-            if (!daThiChinhThuc)
-            {
-                string loaiStr = (de.loaiThi == 1) ? "[CHINH THUC (1 lan)]" : "[ON TAP (n lan)]";
-                cout << "Ma de: " << de.id << " | Mon: " << de.tenMon << " " << loaiStr << " | Thoi gian: " << de.thoiGianLamBai << "s\n";
-                coBai = true;
-            }
-        }
-        if (!coBai)
-        {
-            SetColor(YELLOW);
-            cout << (loaiBai == 1 ? "Hien tai khong co bai thi chinh thuc nao!\n" : "Hien tai khong co bai on tap nao!\n");
-            SetColor(WHITE);
         }
     }
 
-    void xemThongTinDe(QuanLyThi& thi, int loaiBai)
+    void datLaiMatKhau()
     {
-        int maDe = nhapSo<int>("Nhap ma de can xem: ");
-        for (auto& de : thi.getMaDe())
-        {
-            if (de.id == maDe && de.loaiThi == loaiBai)
-            {
-                cout << "\n===== THONG TIN CHI TIET =====\n";
-                cout << "Mon: " << de.tenMon << endl;
-                cout << "So cau hoi: " << de.danhSachCauHoi.size() << endl;
-                cout << "Thoi gian: " << de.thoiGianLamBai << " giay\n";
-                cout << "Trang thai: " << (de.locked ? "Dang khoa" : "Dang mo") << endl;
-                if (de.loaiThi == 1)
-                    cout << "Lich thi: " << de.getSchedule() << endl;
-                else
-                    cout << "So lan lam toi da: " << (de.soLanOnTap == -1 ? "Khong gioi han" : to_string(de.soLanOnTap)) << endl;
-                return;
-            }
-        }
-        cout << "Khong tim thay ma de nay trong danh sach!\n";
+        string mk;
+        cout << "Nhap MK moi: ";
+        getline(cin, mk);
+        password = mk;
     }
 
     double traLoiCauHoi(vector<CauHoi> danhSachCauHoi, time_t start, int thoiGian) const
     {
         int n;
         double diemThi = 0;
-        for (auto& ch : danhSachCauHoi)
+        for (auto &ch : danhSachCauHoi)
         {
             time_t now = time(0);
             if (difftime(now, start) >= thoiGian)
@@ -960,7 +967,7 @@ public:
                 cout << "Het gio lam bai!\n";
                 break;
             }
-            cout << "Cau " << ch.id << ". " << ch.noiDung << endl;
+            cout << "\nCau " << ch.id << ". " << ch.noiDung << endl;
             for (int i = 0; i < 4; i++)
             {
                 cout << i + 1 << ". " << ch.dapAn[i] << endl;
@@ -974,17 +981,55 @@ public:
         return diemThi;
     }
 
-    void lamBai(QuanLyThi& thi, int loaiBai)
+    void xemDanhSachDe(QuanLyThi &thi)
     {
-        int chonDe = nhapSo<int>("Nhap Ma De muon lam: ");
-        deThi* deHienTai = nullptr;
-        for (auto& de : thi.getMaDe())
+        SetColor(LIGHT_CYAN);
+        cout << "--- DANH SACH BAI THI CO THE LAM ---\n";
+        SetColor(WHITE);
+
+        bool coBai = false;
+
+        for (const auto &de : thi.getMaDe())
         {
-            if (de.id == chonDe && de.loaiThi == loaiBai)
+            if (!kiemTraLopDuocThi(de))
+                continue;
+            bool thiChinhThucRoi = false;
+            if (de.loaiThi == 1)
             {
-                deHienTai = const_cast<deThi*>(&de);
-                break;
+                for (const auto &kq : danhSachKetQua)
+                {
+                    if (kq.maDe == de.id && kq.loaiThi == 1)
+                    {
+                        thiChinhThucRoi = true;
+                        break;
+                    }
+                }
             }
+            if (!thiChinhThucRoi)
+            {
+                string loaiStr = (de.loaiThi == 1) ? "[CHINH THUC (1 lan)]" : "[ON TAP (n lan)]";
+                cout << "Ma de: " << de.id << " | Mon: " << de.tenMon << " " << loaiStr << " | Thoi gian: " << de.thoiGianLamBai << "s\n";
+                coBai = true;
+            }
+        }
+        if (!coBai)
+        {
+            SetColor(YELLOW);
+            cout << "Ban da lam het de Chinh thuc hien co!\n";
+            SetColor(WHITE);
+        }
+    }
+
+    void lamBaiThi(QuanLyThi &thi)
+    {
+        int chonDe = nhapSo<int>("Nhap Ma De muon thi: ");
+        deThi *deHienTai = thi.timDeThi(chonDe); // Sử dụng hàm timDeThi
+        if (deHienTai == nullptr || deHienTai->danhSachCauHoi.empty())
+        {
+            SetColor(RED);
+            cout << "De khong hop le hoac chua co cau hoi!\n";
+            SetColor(WHITE);
+            return;
         }
 
         if (deHienTai == nullptr || deHienTai->danhSachCauHoi.empty())
@@ -997,75 +1042,88 @@ public:
         if (!kiemTraLopDuocThi(*deHienTai))
         {
             SetColor(RED);
-            cout << "Ban khong thuoc danh sach lop duoc phep lam bai nay!\n";
+            cout << "Ban khong thuoc danh sach lop duoc phep lam bai thi nay!\n";
             SetColor(WHITE);
             return;
         }
         if (deHienTai->locked)
         {
             SetColor(RED);
-            cout << "Bai dang bi khoa!\n";
+            cout << "De thi dang bi khoa!\n";
             SetColor(WHITE);
             return;
         }
-        if (loaiBai == 1 && !deHienTai->isAvailable())
+        if (!deHienTai->isAvailable())
         {
             SetColor(YELLOW);
-            cout << "Chua den gio hoac da qua han. Lich thi: " << deHienTai->getSchedule() << "\n";
+            cout << "De thi chua hoat dong. Lich thi: " << deHienTai->getSchedule() << "\n";
             SetColor(WHITE);
             return;
         }
 
+        // Đếm số lần đã thi đề này
         int soLanDaThi = 0;
-        for (const auto& kq : danhSachKetQua)
+        for (const auto &kq : danhSachKetQua)
         {
             if (kq.maDe == deHienTai->id)
                 soLanDaThi++;
         }
 
-        if (loaiBai == 1)
+        if (deHienTai->loaiThi == 1)
         {
+            // Chính thức: chỉ 1 lần
             if (soLanDaThi >= 1)
             {
                 SetColor(RED);
-                cout << "Bai thi Chinh thuc chi duoc lam 1 lan. Ban da nop bai roi!\n";
+                cout << "De thi Chinh thuc chi duoc lam 1 lan. Ban da thi roi!\n";
                 SetColor(WHITE);
                 return;
             }
         }
         else
         {
+            // Ôn tập: kiểm tra giới hạn
             if (deHienTai->soLanOnTap != -1 && soLanDaThi >= deHienTai->soLanOnTap)
             {
                 SetColor(RED);
                 cout << "Ban da lam bai on tap nay " << soLanDaThi << "/"
-                    << deHienTai->soLanOnTap << " lan. Het luot!\n";
+                     << deHienTai->soLanOnTap << " lan. Het luot!\n";
                 SetColor(WHITE);
                 return;
             }
 
             SetColor(LIGHT_CYAN);
             if (deHienTai->soLanOnTap == -1)
-                cout << "Lan lam thu " << soLanDaThi + 1 << " (Khong gioi han)\n";
+                cout << "Lan thi thu " << soLanDaThi + 1 << " (Khong gioi han)\n";
             else
-                cout << "Lan lam thu " << soLanDaThi + 1
-                << "/" << deHienTai->soLanOnTap << "\n";
+                cout << "Lan thi thu " << soLanDaThi + 1
+                     << "/" << deHienTai->soLanOnTap << "\n";
             SetColor(WHITE);
         }
 
-        cout << "\n=== BAT DAU LAM BAI: " << deHienTai->tenMon << " ===\n";
+        cout << "\n=== BAT DAU LAM BAI: "
+             << deHienTai->tenMon
+             << " ===\n";
         SetColor(WHITE);
         time_t start = time(0);
 
-        double diemThi = traLoiCauHoi(deHienTai->danhSachCauHoi, start, deHienTai->thoiGianLamBai);
+        double diemThi = traLoiCauHoi(
+            deHienTai->danhSachCauHoi,
+            start,
+            deHienTai->thoiGianLamBai);
 
-        int thoiGianThucTe = (int)difftime(time(0), start);
-        if (thoiGianThucTe == 0) thoiGianThucTe = 1;
-
+        int thoiGianThucTe =
+            (int)difftime(time(0), start);
+        if (thoiGianThucTe == 0)
+            thoiGianThucTe = 1;
         SetColor(GREEN);
-        cout << "=> Nop bai thanh cong! Diem: " << diemThi << " | Thoi gian: " << thoiGianThucTe << "s\n";
-        SetColor(WHITE);
+        cout << "=> Nop bai thanh cong! Diem: "
+             << diemThi
+             << " | Thoi gian: "
+             << thoiGianThucTe
+             << "s\n";
 
+        SetColor(WHITE);
         KetQua kq;
         kq.idSV = this->id;
         kq.tenSV = this->fullName;
@@ -1076,38 +1134,47 @@ public:
         kq.loaiThi = deHienTai->loaiThi;
         this->danhSachKetQua.push_back(kq);
 
-        if (loaiBai == 2)
+        if (deHienTai->loaiThi == 2)
         {
             SetColor(LIGHT_CYAN);
             cout << "\n===== DAP AN =====\n";
-            for (const auto& ch : deHienTai->danhSachCauHoi)
+            for (const auto &ch : deHienTai->danhSachCauHoi)
             {
-                cout << ch.id << ". Dap an dung: " << ch.dapAnDung << ". " << ch.dapAn[ch.dapAnDung - 1] << "\n";
+                cout << ch.id << ". Dap an dung: " << ch.dapAnDung
+                     << ". " << ch.dapAn[ch.dapAnDung - 1] << "\n";
             }
             SetColor(WHITE);
         }
     }
 
-    void hienThiDanhSachKetQua() const
+    void xemThongTinDeThi(QuanLyThi &thi)
     {
-        cout << "\n===== LICH SU LAM BAI =====\n";
-        if (danhSachKetQua.empty())
+        int maDe = nhapSo<int>("Nhap ma de: ");
+        for (auto &de : thi.getMaDe())
         {
-            cout << "Chua co ket qua nao!\n";
-            return;
+            if (de.id == maDe)
+            {
+                cout << "\n===== THONG TIN DE THI =====\n";
+                cout << "Mon: " << de.tenMon << endl;
+                cout << "So cau hoi: " << de.danhSachCauHoi.size() << endl;
+                cout << "Thoi gian: " << de.thoiGianLamBai << " giay\n";
+                cout << "Loai thi: ";
+                if (de.loaiThi == 1)
+                    cout << "Chinh thuc\n";
+                else
+                    cout << "On tap\n";
+                return;
+            }
         }
-        for (const auto& kq : danhSachKetQua)
-        {
-            string loai = (kq.loaiThi == 1) ? "[Chinh thuc]" : "[On tap]";
-            cout << "Ma de: " << kq.maDe << " " << loai << " | Mon: " << kq.mon << " | Diem: " << kq.diem << " | Thoi gian: " << kq.thoiGian << "s\n";
-        }
+        cout << "Khong tim thay de.\n";
     }
 
-    void thongKeDiemTB()
+    void xemMucTieu()
     {
+        VeKhungTieuDe("MUC TIEU PHAN DAU", GREEN);
         double tong = 0;
         int dem = 0;
-        for (const auto& kq : danhSachKetQua)
+        for (const auto &kq : danhSachKetQua)
         {
             if (kq.loaiThi == 1)
             {
@@ -1115,72 +1182,57 @@ public:
                 dem++;
             }
         }
-        cout << "\n===== THONG KE DIEM =====\n";
-        if (dem == 0)
+        double dtb = (dem == 0) ? 0 : (tong / dem);
+        SetColor(BRIGHT_WHITE);
+        cout << "Diem TB Tich Luy (Chinh thuc): "
+             << dtb
+             << "\n";
+
+        SetColor(WHITE);
+
+        if (dtb >= 8.0)
         {
-            cout << "Ban chua co diem bai thi Chinh thuc nao!\n";
+
+            SetColor(GREEN);
+
+            cout << "=> Xuat sac! Ban dat muc Gioi.\n";
+
+            SetColor(WHITE);
+        }
+        else if (dtb >= 6.5)
+        {
+
+            SetColor(YELLOW);
+
+            cout << "=> Kha. De dat Gioi can them: "
+                 << 8.0 - dtb
+                 << " diem.\n";
+
+            SetColor(WHITE);
         }
         else
         {
-            cout << "Tong so bai da thi (Chinh thuc): " << dem << "\n";
-            cout << "Diem TB tich luy: " << tong / dem << "\n";
+
+            SetColor(RED);
+
+            cout << "=> Yeu. De dat Kha can them: "
+                 << 6.5 - dtb
+                 << " diem.\n";
+
+            SetColor(WHITE);
         }
     }
-
-    void xemBangXepHang(const vector<SinhVien>& dsSinhVien)
+    void hienThiDanhSachKetQua(const vector<KetQua> &ds) const
     {
-        SetColor(CYAN);
-        cout << "\n===== BANG XEP HANG TOAN TRUONG (CHINH THUC) =====\n";
-        SetColor(WHITE);
-        struct HSScore {
-            string fullName;
-            double score;
-        };
-        vector<HSScore> bxh;
-
-        for (const auto& hs : dsSinhVien)
+        if (ds.empty())
         {
-            double tong = 0;
-            int dem = 0;
-            for (const auto& kq : hs.getDanhSachKetQua())
-            {
-                if (kq.loaiThi == 1)
-                {
-                    tong += kq.diem;
-                    dem++;
-                }
-            }
-            if (dem > 0)
-                bxh.push_back({ hs.getFullName(), tong / dem });
-        }
-
-        if (bxh.empty())
-        {
-            SetColor(YELLOW);
-            cout << "Chua co du lieu de xep hang!\n";
-            SetColor(WHITE);
+            cout << "Chua co ket qua nao!\n";
             return;
         }
-
-        sort(bxh.begin(), bxh.end(), [](const HSScore& a, const HSScore& b) { return a.score > b.score; });
-
-        for (int i = 0; i < bxh.size(); i++)
+        for (const auto &kq : ds)
         {
-            if (bxh[i].fullName == this->fullName) SetColor(LIGHT_GREEN);
-            cout << i + 1 << ". Ho ten: " << bxh[i].fullName << " | Diem TB: " << bxh[i].score << '\n';
-            SetColor(WHITE);
+            cout << "Ten SV: " << kq.tenSV << " | Mon: " << kq.mon << " | Diem: " << kq.diem << " | Thoi gian: " << kq.thoiGian << " giay" << endl;
         }
-    }
-
-    void datLaiMatKhau()
-    {
-        string mk;
-        cout << "Nhap mat khau moi: ";
-        getline(cin, mk);
-        password = mk;
-        SetColor(GREEN);
-        cout << "Doi mat khau thanh cong!\n";
-        SetColor(WHITE);
     }
 
     string chuyenThanhChuoiFile() const
@@ -1188,28 +1240,25 @@ public:
         return to_string(id) + "|" + username + "|" + password + "|" + fullName + "|" + lop + "|" + to_string(diemTB) + "|" + to_string(teacherId);
     }
 
-    void menu(QuanLyThi& thi, const vector<SinhVien>& dsSinhVienToanTruong)
+    void menu(QuanLyThi &thi)
     {
         int choice;
         do
         {
             SetColor(CYAN);
-            cout << "\n╔══════════════════════════════════════════════╗\n";
+            cout << "╔══════════════════════════════════════════════╗\n";
             cout << "║               MENU SINH VIEN                 ║\n";
             cout << "╠══════════════════════════════════════════════╣\n";
 
             SetColor(YELLOW);
             cout << "║  1. Xem thong tin ca nhan                    ║\n";
-            cout << "║  2. Xem danh sach bai thi (Chinh thuc)       ║\n";
-            cout << "║  3. Xem thong tin bai thi (Chinh thuc)       ║\n";
-            cout << "║  4. Lam bai thi (Chinh thuc)                 ║\n";
+            cout << "║  2. Xem danh sach bai thi                    ║\n";
+            cout << "║  3. Xem thong tin bai thi                    ║\n";
+            cout << "║  4. Lam bai thi                              ║\n";
             cout << "║  5. Xem lich su thi                          ║\n";
             cout << "║  6. Thong ke diem trung binh                 ║\n";
-            cout << "║  7. Xem bang xep hang                        ║\n";
-            cout << "║  8. Xem danh sach bai on tap                 ║\n";
-            cout << "║  9. Xem thong tin bai on tap                 ║\n";
-            cout << "║ 10. Lam bai on tap                           ║\n";
-            cout << "║ 11. Doi mat khau                             ║\n";
+            cout << "║  7. Xem danh sach bai on tap                 ║\n";
+            cout << "║  8. Doi mat khau                             ║\n";
             cout << "║  0. Dang xuat                                ║\n";
 
             SetColor(CYAN);
@@ -1221,23 +1270,67 @@ public:
             SetColor(WHITE);
             switch (choice)
             {
-            case 1: hienThiThongTin(); break;
-            case 2: xemDanhSachDe(thi, 1); break;
-            case 3: xemThongTinDe(thi, 1); break;
-            case 4: lamBai(thi, 1); break;
-            case 5: hienThiDanhSachKetQua(); break;
-            case 6: thongKeDiemTB(); break;
-            case 7: xemBangXepHang(dsSinhVienToanTruong); break;
-            case 8: xemDanhSachDe(thi, 2); break;
-            case 9: xemThongTinDe(thi, 2); break;
-            case 10: lamBai(thi, 2); break;
-            case 11: datLaiMatKhau(); break;
+            case 1:
+                SetColor(LIGHT_CYAN);
+                hienThiThongTin();
+                SetColor(WHITE);
+                break;
+
+            case 2:
+                SetColor(LIGHT_BLUE);
+                xemDanhSachDe(thi);
+                SetColor(WHITE);
+                break;
+
+            case 3:
+                SetColor(CYAN);
+                xemThongTinDeThi(thi);
+                SetColor(WHITE);
+                break;
+
+            case 4:
+                SetColor(LIGHT_GREEN);
+                lamBaiThi(thi);
+                SetColor(WHITE);
+                break;
+
+            case 5:
+                SetColor(YELLOW);
+                hienThiDanhSachKetQua(danhSachKetQua);
+                SetColor(WHITE);
+                break;
+
+            case 6:
+                SetColor(LIGHT_MAGENTA);
+                thongKeDiemTB();
+                SetColor(WHITE);
+                break;
+
+            case 7:
+                SetColor(LIGHT_YELLOW);
+                xemDanhSachOnTap(thi);
+                SetColor(WHITE);
+                break;
+
+            case 8:
+                datLaiMatKhau();
+
+                SetColor(GREEN);
+                cout << "Doi mat khau thanh cong!\n";
+                SetColor(WHITE);
+
+                break;
+
             case 0:
+
                 SetColor(GREEN);
                 cout << "Dang xuat thanh cong!\n";
                 SetColor(WHITE);
+
                 break;
+
             default:
+
                 SetColor(RED);
                 cout << "Lua chon khong hop le!\n";
                 SetColor(WHITE);
@@ -1253,7 +1346,7 @@ private:
     string mon;
 
 public:
-    void setMon(const string& m) { mon = m; }
+    void setMon(const string &m) { mon = m; }
     string getMon() const { return mon; }
 
     GiangVien() : Person() {};
@@ -1294,24 +1387,24 @@ public:
 
         SetColor(WHITE);
     }
-    void xemSinhVien(const vector<SinhVien>& students)
+    void xemSinhVien(const vector<SinhVien> &students)
     {
         SetColor(LIGHT_CYAN);
         cout << "\n--- sinh vien LOP CHU NHIEM ---\n";
         SetColor(WHITE);
-        for (const auto& hs : students)
+        for (const auto &hs : students)
         {
             if (hs.layMaGV() == this->id)
                 hs.hienThiThongTin();
         }
     }
 
-    void xemKetQuaThi(const vector<SinhVien>& students)
+    void xemKetQuaThi(const vector<SinhVien> &students)
     {
         SetColor(LIGHT_CYAN);
         cout << "\n===== KET QUA THI LOP CHU NHIEM =====\n";
 
-        for (const auto& hs : students)
+        for (const auto &hs : students)
         {
             if (hs.layMaGV() == this->id)
             {
@@ -1319,13 +1412,13 @@ public:
                 SetColor(LIGHT_YELLOW);
                 cout << "\nSinh vien: " << hs.getFullName() << endl;
 
-                for (const auto& kq : hs.getDanhSachKetQua())
+                for (const auto &kq : hs.getDanhSachKetQua())
                 {
 
                     SetColor(LIGHT_GREEN);
                     cout << "Mon: " << kq.mon
-                        << " | Diem: " << kq.diem
-                        << " | Thoi gian: " << kq.thoiGian << "s\n";
+                         << " | Diem: " << kq.diem
+                         << " | Thoi gian: " << kq.thoiGian << "s\n";
                 }
             }
         }
@@ -1333,7 +1426,7 @@ public:
         SetColor(WHITE);
     }
 
-    void sapXepSinhVienTheoDiem(vector<SinhVien>& students)
+    void sapXepSinhVienTheoDiem(vector<SinhVien> &students)
     {
         vector<SinhVien> ds;
         for (auto hs : students)
@@ -1344,21 +1437,21 @@ public:
             }
         }
         sort(ds.begin(), ds.end(), [](SinhVien a, SinhVien b)
-            { return a.layDiem() > b.layDiem(); });
+             { return a.layDiem() > b.layDiem(); });
         SetColor(CYAN);
         cout << "\n===== SAP XEP sinh vien THEO DIEM =====\n";
         SetColor(WHITE);
-        for (auto& hs : ds)
+        for (auto &hs : ds)
         {
             cout << hs.getFullName() << " | Diem TB: " << hs.layDiem() << endl;
         }
     }
 
-    void thongKe(const vector<SinhVien>& students)
+    void thongKe(const vector<SinhVien> &students)
     {
         double tong = 0;
         int dem = 0;
-        for (const auto& hs : students)
+        for (const auto &hs : students)
         {
             if (hs.layMaGV() == this->id)
             {
@@ -1372,14 +1465,14 @@ public:
             cout << "Khong co du lieu!\n";
     }
 
-    void thongKeTheoMon(const vector<SinhVien>& students)
+    void thongKeTheoMon(const vector<SinhVien> &students)
     {
         string monTK = inputLine("Nhap ten mon muon thong ke: ");
         SetColor(CYAN);
 
         cout << "\n--- THONG KE DIEM MON "
-            << monTK
-            << " (CHINH THUC) ---\n";
+             << monTK
+             << " (CHINH THUC) ---\n";
 
         SetColor(WHITE);
         struct HSData
@@ -1389,18 +1482,18 @@ public:
         };
         vector<HSData> tk;
 
-        for (const auto& hs : students)
+        for (const auto &hs : students)
         {
             if (hs.layMaGV() == this->id)
             {
                 double maxDiem = -1;
-                for (const auto& kq : hs.getDanhSachKetQua())
+                for (const auto &kq : hs.getDanhSachKetQua())
                 {
                     if (kq.mon == monTK && kq.loaiThi == 1)
                         maxDiem = max(maxDiem, kq.diem);
                 }
                 if (maxDiem >= 0)
-                    tk.push_back({ hs.getFullName(), maxDiem });
+                    tk.push_back({hs.getFullName(), maxDiem});
             }
         }
 
@@ -1412,14 +1505,14 @@ public:
         }
         else
         {
-            sort(tk.begin(), tk.end(), [](const HSData& a, const HSData& b)
-                { return a.diem > b.diem; });
-            for (const auto& data : tk)
+            sort(tk.begin(), tk.end(), [](const HSData &a, const HSData &b)
+                 { return a.diem > b.diem; });
+            for (const auto &data : tk)
                 cout << "HS: " << data.ten << " | Diem mon: " << data.diem << "\n";
         }
     }
 
-    void menu(vector<SinhVien>& students, const vector<ClassInfo>& classes, const vector<PhongThi>& examRooms, QuanLyThi& thi)
+    void menu(vector<SinhVien> &students, const vector<ClassInfo> &classes, const vector<PhongThi> &examRooms, QuanLyThi &thi)
     {
         int choice;
         do
@@ -1512,12 +1605,12 @@ public:
 class QuanLyNguoiDung
 {
 private:
-    vector<Person*> users;
+    vector<Person *> users;
 
 public:
-    void them(Person* p) { users.push_back(p); }
+    void them(Person *p) { users.push_back(p); }
 
-    Person* dangNhap()
+    Person *dangNhap()
     {
         string u, p;
         cout << "User: ";
@@ -1536,7 +1629,7 @@ public:
         return NULL;
     }
 
-    vector<Person*>& layDanhSach() { return users; }
+    vector<Person *> &layDanhSach() { return users; }
 };
 
 // ========================== RANK ITEM ==========================
@@ -1560,20 +1653,20 @@ private:
     int totalStudents;
 
 public:
-    vector<ClassInfo>& getClasses() { return classes; }
-    vector<PhongThi>& getRooms() { return examRooms; }
+    vector<ClassInfo> &getClasses() { return classes; }
+    vector<PhongThi> &getRooms() { return examRooms; }
     void sortRanking()
     {
-        sort(ranking.begin(), ranking.end(), [](const RankItem& a, const RankItem& b)
-            {
-                if (a.score != b.score) return a.score > b.score;
-                return a.fullName < b.fullName; });
+        sort(ranking.begin(), ranking.end(), [](const RankItem &a, const RankItem &b)
+             {
+            if (a.score != b.score) return a.score > b.score;
+            return a.fullName < b.fullName; });
     }
 
     AdminSystem() : totalStudents(0) { sortRanking(); }
 
     // ==================== VALIDATION ====================
-    bool isValidName(const string& s) const
+    bool isValidName(const string &s) const
     {
         if (s.empty())
             return false;
@@ -1588,7 +1681,7 @@ public:
         return true;
     }
 
-    bool isValidUsername(const string& s) const
+    bool isValidUsername(const string &s) const
     {
         if (s.empty())
             return false;
@@ -1603,14 +1696,14 @@ public:
         return true;
     }
 
-    bool isValidPassword(const string& s) const
+    bool isValidPassword(const string &s) const
     {
         return s.length() >= 6;
     }
 
     bool teacherIdExists(int id) const
     {
-        for (const auto& t : teachers)
+        for (const auto &t : teachers)
         {
             if (t.getId() == id)
                 return true;
@@ -1620,7 +1713,7 @@ public:
 
     bool studentIdExists(int id) const
     {
-        for (const auto& hs : students)
+        for (const auto &hs : students)
         {
             if (hs.getId() == id)
                 return true;
@@ -1630,7 +1723,7 @@ public:
 
     bool classIdExists(int id) const
     {
-        for (const auto& c : classes)
+        for (const auto &c : classes)
         {
             if (c.id == id)
                 return true;
@@ -1638,16 +1731,16 @@ public:
         return false;
     }
 
-    bool usernameExists(const string& username) const
+    bool usernameExists(const string &username) const
     {
         if (username == "admin")
             return true;
-        for (const auto& t : teachers)
+        for (const auto &t : teachers)
         {
             if (t.getUsername() == username)
                 return true;
         }
-        for (const auto& hs : students)
+        for (const auto &hs : students)
         {
             if (hs.getUsername() == username)
                 return true;
@@ -1687,7 +1780,7 @@ public:
 
     bool teacherHasAssignedClass(int teacherId) const
     {
-        for (const auto& c : classes)
+        for (const auto &c : classes)
         {
             if (c.teacherId == teacherId)
                 return true;
@@ -1698,9 +1791,9 @@ public:
     void saveKetQua() const
     {
         ofstream fout("ketqua.txt");
-        for (const auto& hs : students)
+        for (const auto &hs : students)
         {
-            for (const auto& kq : hs.getDanhSachKetQua())
+            for (const auto &kq : hs.getDanhSachKetQua())
             {
                 fout << kq.idSV << '|' << kq.tenSV << '|' << kq.mon << '|' << kq.diem << '|' << kq.thoiGian << '|' << kq.maDe << '|' << kq.loaiThi << '\n';
             }
@@ -1711,27 +1804,36 @@ public:
     void loadKetQua()
     {
         ifstream fin("ketqua.txt");
-        if (!fin) return;
+        if (!fin)
+            return;
         string line;
         while (getline(fin, line))
         {
-            if (!line.empty() && line.back() == '\r') line.pop_back();
-            if (line.empty()) continue;
+            if (!line.empty() && line.back() == '\r')
+                line.pop_back();
+            if (line.empty())
+                continue;
             stringstream ss(line);
-            vector<string> tk; string t;
-            while (getline(ss, t, '|')) tk.push_back(t);
-            if (tk.size() < 7) continue;
+            string idSVStr, tenSV, mon, diemStr, thoiGianStr, maDeStr, loaiThiStr;
+
+            getline(ss, idSVStr, '|');
+            getline(ss, tenSV, '|');
+            getline(ss, mon, '|');
+            getline(ss, diemStr, '|');
+            getline(ss, thoiGianStr, '|');
+            getline(ss, maDeStr, '|');
+            getline(ss, loaiThiStr);
 
             KetQua kq;
-            kq.idSV = safeStoi(tk[0]);
-            kq.tenSV = tk[1];
-            kq.mon = tk[2];
-            kq.diem = safeStod(tk[3]);
-            kq.thoiGian = safeStoi(tk[4]);
-            kq.maDe = safeStoi(tk[5]);
-            kq.loaiThi = safeStoi(tk[6]);
+            kq.idSV = stoi(idSVStr);
+            kq.tenSV = tenSV;
+            kq.mon = mon;
+            kq.diem = stod(diemStr);
+            kq.thoiGian = stoi(thoiGianStr);
+            kq.maDe = stoi(maDeStr);
+            kq.loaiThi = stoi(loaiThiStr);
 
-            for (auto& hs : students)
+            for (auto &hs : students)
             {
                 if (hs.getId() == kq.idSV)
                 {
@@ -1748,7 +1850,7 @@ public:
     void recalcTotalStudents()
     {
         totalStudents = 0;
-        for (const auto& c : classes)
+        for (const auto &c : classes)
         {
             totalStudents += c.studentCount;
         }
@@ -1872,6 +1974,45 @@ public:
             cout << "Khong tim thay sinh vien.\n";
             return;
         }
+        int choice = nhapSo<int>("Chon: ");
+
+        if (choice == 1 || choice == 4)
+        {
+            string newUsername = inputLine("Nhap username moi: ");
+            if (!isValidUsername(newUsername))
+            {
+                cout << "Username khong hop le.\n";
+                return;
+            }
+            if (newUsername != students[idx].getUsername() && usernameExists(newUsername))
+            {
+                cout << "Username da ton tai.\n";
+                return;
+            }
+            students[idx].setUsername(newUsername);
+        }
+
+        if (choice == 2 || choice == 4)
+        {
+            string newPassword = inputLine("Nhap password moi: ");
+            if (!isValidPassword(newPassword))
+            {
+                cout << "Password khong hop le.\n";
+                return;
+            }
+            students[idx].setPassword(newPassword);
+        }
+
+        if (choice == 3 || choice == 4)
+        {
+            string newFullName = inputLine("Nhap ho ten moi: ");
+            if (!isValidName(newFullName))
+            {
+                cout << "Ho ten khong hop le.\n";
+                return;
+            }
+            students[idx].setFullName(newFullName);
+        }
 
         cout << "1. Sua username\n2. Sua password\n3. Sua ho ten\n4. Sua lop\n5. Sua gioi tinh\n6. Sua ngay sinh\n7. Sua so dien thoai\n8. Sua diem trung binh\n9. Sua giang vien phu trach\n10. Sua tat ca\n";
         int chHS = nhapSo<int>("Chon: ");
@@ -1963,7 +2104,7 @@ public:
         cout << "Xoa sinh vien thanh cong.\n";
     }
 
-    vector<SinhVien>& getStudents() { return students; }
+    vector<SinhVien> &getStudents() { return students; }
 
     // ==================== TEACHER CRUD ====================
     void addTeacher()
@@ -2093,7 +2234,7 @@ public:
         cout << "Xoa giang vien thanh cong.\n";
     }
 
-    vector<GiangVien>& getTeachers() { return teachers; }
+    vector<GiangVien> &getTeachers() { return teachers; }
 
     // ==================== CLASS CRUD ====================
     void addClass()
@@ -2160,10 +2301,10 @@ public:
         for (int i = 0; i < (int)classes.size(); i++)
         {
             cout << "STT: " << i + 1 << " | ID lop: " << classes[i].id
-                << " | Ten lop: " << classes[i].className
-                << " | CVHT ID: " << classes[i].coVanHocTapId
-                << " | So GV day: " << classes[i].danhSachGiangVien.size()
-                << " | So SV: " << classes[i].studentCount << '\n';
+                 << " | Ten lop: " << classes[i].className
+                 << " | CVHT ID: " << classes[i].coVanHocTapId
+                 << " | So GV day: " << classes[i].danhSachGiangVien.size()
+                 << " | So SV: " << classes[i].studentCount << '\n';
         }
     }
     void editClass()
@@ -2238,7 +2379,7 @@ public:
 
     bool roomIdExists(int id) const
     {
-        for (const auto& r : examRooms)
+        for (const auto &r : examRooms)
         {
             if (r.id == id)
                 return true;
@@ -2284,8 +2425,8 @@ public:
         for (int i = 0; i < (int)examRooms.size(); i++)
         {
             cout << "STT: " << i + 1 << " | ID: " << examRooms[i].id << " | Ten phong: " << examRooms[i].tenPhong
-                << " | Suc chua: " << examRooms[i].sucChua
-                << " | Trang thai: " << (examRooms[i].locked ? "Khoa" : "Mo") << '\n';
+                 << " | Suc chua: " << examRooms[i].sucChua
+                 << " | Trang thai: " << (examRooms[i].locked ? "Khoa" : "Mo") << '\n';
         }
     }
 
@@ -2357,102 +2498,133 @@ public:
         } while (choice != 0);
     }
 
-    void exportExamReport(const QuanLyThi& thi) const
+    void exportExamReport(const QuanLyThi &thi) const
     {
         ofstream fout("bao_cao_thi.csv");
         fout << "ID_SV,Ten_SV,Ma_De,Mon,Loai_Thi,Điểm,Thoi_gian,Phong,Thoi_gian_bat_dau,Thoi_gian_ket_thuc,Trang_thai\n";
-        for (const auto& hs : students)
+        for (const auto &hs : students)
         {
-            for (const auto& kq : hs.getDanhSachKetQua())
+            for (const auto &kq : hs.getDanhSachKetQua())
             {
-                const deThi* de = thi.timDeThi(kq.maDe);
+                const deThi *de = thi.timDeThi(kq.maDe);
                 string phong = de ? to_string(de->phongThiId) : "0";
                 string batDau = de ? formatDateTime(de->batDau) : "N/A";
                 string ketThuc = de ? formatDateTime(de->ketThuc) : "N/A";
                 string trangThai = de ? (de->locked ? "Khoa" : (de->isAvailable() ? "Dang mo" : "Chua den gio/da ket thuc")) : "Khong co";
                 fout << hs.getId() << ',' << hs.getFullName() << ',' << kq.maDe << ',' << kq.mon << ',' << kq.loaiThi << ',' << kq.diem << ',' << kq.thoiGian << ','
-                    << phong << ',' << batDau << ',' << ketThuc << ',' << trangThai << '\n';
+                     << phong << ',' << batDau << ',' << ketThuc << ',' << trangThai << '\n';
             }
         }
         fout.close();
         cout << "Xuat bao cao thi thanh cong: bao_cao_thi.csv\n";
     }
 
-    void viewExamStatistics(const QuanLyThi& thi) const
+    void viewExamStatistics(const QuanLyThi &thi) const
     {
         cout << "\n===== THONG KE BAO CAO THI =====\n";
+
         if (students.empty())
         {
             cout << "Chua co sinh vien!\n";
             return;
         }
+
+        // Thu thập kết quả thi theo mã đề
         map<int, vector<double>> examScores;
-        for (const auto& hs : students)
+        for (const auto &hs : students)
         {
-            for (const auto& kq : hs.getDanhSachKetQua())
+            for (const auto &kq : hs.getDanhSachKetQua())
             {
                 examScores[kq.maDe].push_back(kq.diem);
             }
         }
-        if (examScores.empty())
+
+        bool hasAnyResult = false;
+
+        for (const auto &de : thi.getMaDe())
         {
-            cout << "Chua co ket qua thi de thong ke.\n";
-            return;
-        }
-        for (const auto& exam : examScores)
-        {
-            const deThi* de = thi.timDeThi(exam.first);
-            if (!de)
-                continue;
-            const auto& scores = exam.second;
-            double sum = 0;
-            double maxScore = 0;
-            double minScore = 10;
-            for (double v : scores)
+            auto it = examScores.find(de.id);
+            const vector<double> &scores = (it != examScores.end()) ? it->second : vector<double>{};
+
+            cout << "Ma de: " << de.id
+                 << " | Mon: " << de.tenMon
+                 << " | Loai: " << (de.loaiThi == 1 ? "Chinh thuc" : "On tap")
+                 << " | Thoi gian: " << de.thoiGianLamBai << "s"
+                 << " | So luot thi: " << scores.size();
+
+            if (!scores.empty())
             {
-                sum += v;
-                maxScore = max(maxScore, v);
-                minScore = min(minScore, v);
+                hasAnyResult = true;
+                double sum = 0, maxS = 0, minS = 10;
+                for (double v : scores)
+                {
+                    sum += v;
+                    if (v > maxS)
+                        maxS = v;
+                    if (v < minS)
+                        minS = v;
+                }
+                double avg = sum / scores.size();
+
+                cout << fixed << setprecision(2)
+                     << " | TB: " << avg
+                     << " | Min: " << minS
+                     << " | Max: " << maxS;
             }
-            double avg = sum / scores.size();
-            cout << "Ma de: " << de->id << " | Mon: " << de->tenMon << " | So luot thi: " << scores.size() << " | Diem TB: " << avg << " | Min: " << minScore << " | Max: " << maxScore << '\n';
-            int barLength = min((int)scores.size(), 20);
-            cout << "Bang diem: ";
-            for (int i = 0; i < barLength; i++)
+            else
+            {
+                cout << " | [Chua co ket qua]";
+            }
+            cout << endl;
+
+            // Thanh tiến trình
+            int bar = min((int)scores.size(), 25);
+            cout << "Progress: ";
+            for (int i = 0; i < bar; i++)
                 cout << "#";
-            cout << "\n";
+            cout << "\n\n";
         }
+
+        if (!hasAnyResult)
+            cout << "Hien tai chua co sinh vien nao nop bai thi.\n";
     }
 
     void saveRooms() const
     {
         ofstream fout("phongthi.txt");
-        for (const auto& r : examRooms)
+        for (const auto &r : examRooms)
         {
             fout << r.id << '|' << r.tenPhong << '|' << r.sucChua << '|' << (r.locked ? 1 : 0) << '\n';
         }
     }
 
-    void loadRooms(const string& fileName)
+    void loadRooms(const string &fileName)
     {
         examRooms.clear();
         ifstream fin(fileName);
-        if (!fin) return;
+        if (!fin)
+        {
+            cout << "Khong mo duoc file phong thi!\n";
+            return;
+        }
         string line;
         while (getline(fin, line))
         {
-            if (!line.empty() && line.back() == '\r') line.pop_back();
-            if (line.empty()) continue;
+            if (!line.empty() && line.back() == '\r')
+                line.pop_back();
+            if (line.empty())
+                continue;
             stringstream ss(line);
-            vector<string> tk; string t;
-            while (getline(ss, t, '|')) tk.push_back(t);
-            if (tk.size() < 4) continue;
-
+            string idStr, tenPhong, sucChuaStr, lockedStr;
+            getline(ss, idStr, '|');
+            getline(ss, tenPhong, '|');
+            getline(ss, sucChuaStr, '|');
+            getline(ss, lockedStr);
             PhongThi r;
-            r.id = safeStoi(tk[0]);
-            r.tenPhong = tk[1];
-            r.sucChua = safeStoi(tk[2]);
-            r.locked = (tk[3] == "1");
+            r.id = stoi(idStr);
+            r.tenPhong = tenPhong;
+            r.sucChua = stoi(sucChuaStr);
+            r.locked = (lockedStr == "1");
             examRooms.push_back(r);
         }
         fin.close();
@@ -2465,11 +2637,11 @@ public:
         cout << "So giang vien: " << teachers.size() << '\n';
         cout << "So lop: " << classes.size() << '\n';
         cout << "So phong thi: " << examRooms.size() << '\n';
-        cout << "Tong so sinh vien: " << totalStudents << '\n';
+        cout << "Tong so sinh vien: " << students.size() << '\n';
         cout << "So muc trong bang xep hang: " << ranking.size() << '\n';
 
         int assignedClassCount = 0;
-        for (const auto& c : classes)
+        for (const auto &c : classes)
         {
             if (c.teacherId != 0)
                 assignedClassCount++;
@@ -2489,11 +2661,11 @@ public:
         };
         vector<HSScore> bxh;
 
-        for (const auto& hs : students)
+        for (const auto &hs : students)
         {
             double tong = 0;
             int dem = 0;
-            for (const auto& kq : hs.getDanhSachKetQua())
+            for (const auto &kq : hs.getDanhSachKetQua())
             {
                 if (kq.loaiThi == 1)
                 {
@@ -2502,7 +2674,7 @@ public:
                 }
             }
             if (dem > 0)
-                bxh.push_back({ hs.getFullName(), tong / dem });
+                bxh.push_back({hs.getFullName(), tong / dem});
         }
 
         if (bxh.empty())
@@ -2512,8 +2684,8 @@ public:
             SetColor(WHITE);
             return;
         }
-        sort(bxh.begin(), bxh.end(), [](const HSScore& a, const HSScore& b)
-            { return a.score > b.score; });
+        sort(bxh.begin(), bxh.end(), [](const HSScore &a, const HSScore &b)
+             { return a.score > b.score; });
         for (int i = 0; i < bxh.size(); i++)
         {
             cout << i + 1 << ". Ho ten: " << bxh[i].fullName << " | Diem TB: " << bxh[i].score << '\n';
@@ -2524,7 +2696,7 @@ public:
     void saveTeachers() const
     {
         ofstream fout("giangvien.txt");
-        for (const auto& t : teachers)
+        for (const auto &t : teachers)
         {
             fout << t.getId() << '|' << t.getUsername() << '|' << t.getPassword() << '|' << t.getFullName() << '|' << t.getMon() << '\n';
         }
@@ -2534,7 +2706,7 @@ public:
     void saveRanking() const
     {
         ofstream fout("ranking.txt");
-        for (const auto& r : ranking)
+        for (const auto &r : ranking)
         {
             fout << r.id << '|' << r.fullName << '|' << r.score << '\n';
         }
@@ -2543,7 +2715,7 @@ public:
     void saveStudents() const
     {
         ofstream file("sinhvien.txt");
-        for (const auto& s : students)
+        for (const auto &s : students)
         {
             file << s.getId() << '|' << s.getUsername() << '|' << s.getPassword() << '|' << s.getFullName() << '|' << s.getLop() << '|' << s.getGioiTinh() << '|' << s.getBirthDay() << '|' << s.getSdt() << '|' << s.layDiem() << '|' << s.layMaGV() << '\n';
         }
@@ -2561,62 +2733,96 @@ public:
         cout << "Luu du lieu thanh cong.\n";
     }
 
-    void loadStudents(const string& fileName)
+    void loadStudents(const string &fileName)
     {
         students.clear();
         ifstream fin(fileName);
-        if (!fin) return;
+        if (!fin)
+        {
+            cout << "Khong mo duoc file sinh vien!\n";
+            return;
+        }
 
         string line;
         while (getline(fin, line))
         {
-            if (!line.empty() && line.back() == '\r') line.pop_back();
-            if (line.empty()) continue;
+            if (!line.empty() && line.back() == '\r')
+                line.pop_back();
+            if (line.empty())
+                continue;
             stringstream ss(line);
-            vector<string> tk; string t;
-            while (getline(ss, t, '|')) tk.push_back(t);
-            if (tk.size() < 10) continue;
+
+            string idStr, username, password, fullName, mon;
+            string lop, gioitinh, birthDay, sdt;
+            string diemTBStr, teacherIdStr;
+
+            getline(ss, idStr, '|');
+            getline(ss, username, '|');
+            getline(ss, password, '|');
+            getline(ss, fullName, '|');
+            getline(ss, lop, '|');
+            getline(ss, gioitinh, '|');
+            getline(ss, birthDay, '|');
+            getline(ss, sdt, '|');
+            getline(ss, diemTBStr, '|');
+            getline(ss, teacherIdStr);
 
             SinhVien s;
-            s.setId(safeStoi(tk[0]));
-            s.setUsername(tk[1]);
-            s.setPassword(tk[2]);
-            s.setFullName(tk[3]);
-            s.setLop(tk[4]);
-            s.setGioiTinh(tk[5]);
-            s.setBirthDay(tk[6]);
-            s.setSdt(tk[7]);
-            s.setDiemTB(safeStod(tk[8]));
-            s.setTeacherId(safeStoi(tk[9]));
+            s.setId(stoi(idStr));
+            s.setUsername(username);
+            s.setPassword(password);
+            s.setFullName(fullName);
+            s.setLop(lop);
+            s.setGioiTinh(gioitinh);
+            s.setBirthDay(birthDay);
+            s.setSdt(sdt);
+
+            if (diemTBStr.empty())
+                diemTBStr = "0";
+            if (teacherIdStr.empty())
+                teacherIdStr = "0";
+
+            s.setDiemTB(stod(diemTBStr));
+            s.setTeacherId(stoi(teacherIdStr));
             students.push_back(s);
         }
         fin.close();
         cout << "Tai danh sach sinh vien thanh cong.\n";
     }
 
-    void loadTeachers(const string& fileName)
+    void loadTeachers(const string &fileName)
     {
         teachers.clear();
         ifstream fin(fileName);
-        if (!fin) return;
+        if (!fin)
+        {
+            cout << "Khong mo duoc file giang vien!\n";
+            return;
+        }
 
         string line;
         while (getline(fin, line))
         {
-            if (!line.empty() && line.back() == '\r') line.pop_back();
-            if (line.empty()) continue;
+            if (!line.empty() && line.back() == '\r')
+                line.pop_back();
+            if (line.empty())
+                continue;
             stringstream ss(line);
-            vector<string> tk; string t;
-            while (getline(ss, t, '|')) tk.push_back(t);
-            if (tk.size() < 5) continue;
+            string idStr, username, password, fullName, mon;
 
-            GiangVien tObj;
-            tObj.setId(safeStoi(tk[0]));
-            tObj.setUsername(tk[1]);
-            tObj.setPassword(tk[2]);
-            tObj.setFullName(tk[3]);
-            tObj.setMon(tk[4]);
-            teachers.push_back(tObj);
+            getline(ss, idStr, '|');
+            getline(ss, username, '|');
+            getline(ss, password, '|');
+            getline(ss, fullName, '|');
+            getline(ss, mon);
+
+            GiangVien t;
+            t.setId(stoi(idStr));
+            t.setUsername(username);
+            t.setPassword(password);
+            t.setFullName(fullName);
+            t.setMon(mon);
+            teachers.push_back(t);
         }
         fin.close();
         cout << "Tai danh sach giang vien thanh cong.\n";
@@ -2625,39 +2831,47 @@ public:
     void saveClasses() const
     {
         ofstream fout("lophoc.txt");
-        for (const auto& c : classes)
+        for (const auto &c : classes)
         {
             fout << c.id << '|'
-                << c.className << '|'
-                << c.coVanHocTapId << '|'
-                << c.teacherId << '|'
-                << c.studentCount << '\n';
+                 << c.className << '|'
+                 << c.coVanHocTapId << '|'
+                 << c.teacherId << '|'
+                 << c.studentCount << '\n';
         }
         fout.close();
     }
 
-    void loadClasses(const string& fileName)
+    void loadClasses(const string &fileName)
     {
         classes.clear();
         ifstream fin(fileName);
-        if (!fin) return;
+        if (!fin)
+            return;
         string line;
         while (getline(fin, line))
         {
-            if (!line.empty() && line.back() == '\r') line.pop_back();
-            if (line.empty()) continue;
+            if (!line.empty() && line.back() == '\r')
+                line.pop_back();
+            if (line.empty())
+                continue;
             stringstream ss(line);
-            vector<string> tk; string t;
-            while (getline(ss, t, '|')) tk.push_back(t);
-            if (tk.size() < 5) continue;
+            string idStr, className, cvhtIdStr, teacherIdStr, studentCountStr;
+
+            getline(ss, idStr, '|');
+            getline(ss, className, '|');
+            getline(ss, cvhtIdStr, '|');
+            getline(ss, teacherIdStr, '|'); // cột 4 = teacherId
+            getline(ss, studentCountStr);   // cột 5 = studentCount
 
             ClassInfo c;
-            c.id = safeStoi(tk[0]);
-            c.className = tk[1];
-            c.coVanHocTapId = safeStoi(tk[2]);
-            c.teacherId = safeStoi(tk[3]);
-            c.studentCount = safeStoi(tk[4]);
+            c.id = stoi(idStr);
+            c.className = className;
+            c.coVanHocTapId = stoi(cvhtIdStr);
+            c.teacherId = stoi(teacherIdStr);
+            c.studentCount = stoi(studentCountStr);
 
+            // Đồng bộ danhSachGiangVien từ teacherId
             if (c.teacherId != 0)
                 c.danhSachGiangVien.push_back(c.teacherId);
 
@@ -2671,22 +2885,27 @@ public:
     {
         ranking.clear();
         ifstream fin("ranking.txt");
-        if (!fin) return;
+        if (!fin)
+            return;
 
         string line;
         while (getline(fin, line))
         {
-            if (!line.empty() && line.back() == '\r') line.pop_back();
-            if (line.empty()) continue;
+            if (!line.empty() && line.back() == '\r')
+                line.pop_back();
+            if (line.empty())
+                continue;
             stringstream ss(line);
-            vector<string> tk; string t;
-            while (getline(ss, t, '|')) tk.push_back(t);
-            if (tk.size() < 3) continue;
+            string idStr, fullName, scoreStr;
+
+            getline(ss, idStr, '|');
+            getline(ss, fullName, '|');
+            getline(ss, scoreStr);
 
             RankItem r;
-            r.id = safeStoi(tk[0]);
-            r.fullName = tk[1];
-            r.score = safeStod(tk[2]);
+            r.id = stoi(idStr);
+            r.fullName = fullName;
+            r.score = stod(scoreStr);
             ranking.push_back(r);
         }
         sortRanking();
@@ -2696,24 +2915,47 @@ public:
     {
         cout << "Chon file sinh vien...\n";
         string studentFile = taiFile();
-        if (!studentFile.empty()) loadStudents(studentFile);
-        else cout << "Khong chon file sinh vien!\n";
+        if (!studentFile.empty())
+        {
+            loadStudents(studentFile);
+        }
+        else
+        {
+            cout << "Khong chon file sinh vien!\n";
+        }
 
         cout << "Chon file giang vien...\n";
         string teacherFile = taiFile();
-        if (!teacherFile.empty()) loadTeachers(teacherFile);
-        else cout << "Khong chon file giang vien!\n";
+        if (!teacherFile.empty())
+        {
+            loadTeachers(teacherFile);
+        }
+        else
+        {
+            cout << "Khong chon file giang vien!\n";
+        }
 
         cout << "Chon file lop hoc...\n";
         string classFile = taiFile();
-        if (!classFile.empty()) loadClasses(classFile);
-        else cout << "Khong chon file lop hoc!\n";
+        if (!classFile.empty())
+        {
+            loadClasses(classFile);
+        }
+        else
+        {
+            cout << "Khong chon file lop hoc!\n";
+        }
 
         cout << "Chon file phong thi...\n";
         string roomFile = taiFile();
-        if (!roomFile.empty()) loadRooms(roomFile);
-        else cout << "Khong chon file phong thi!\n";
-
+        if (!roomFile.empty())
+        {
+            loadRooms(roomFile);
+        }
+        else
+        {
+            cout << "Khong chon file phong thi!\n";
+        }
         loadRanking();
         loadKetQua();
         recalcTotalStudents();
@@ -2731,7 +2973,7 @@ public:
         {
             int id = nhapSo<int>("Nhap ID: ");
             bool found = false;
-            for (const auto& s : students)
+            for (const auto &s : students)
             {
                 if (s.getId() == id)
                 {
@@ -2747,7 +2989,7 @@ public:
         {
             string name = inputLine("Nhap ten (phan hay day du): ");
             bool found = false;
-            for (const auto& s : students)
+            for (const auto &s : students)
             {
                 if (s.getFullName().find(name) != string::npos)
                 {
@@ -2762,7 +3004,7 @@ public:
         {
             string lop = inputLine("Nhap lop: ");
             bool found = false;
-            for (const auto& s : students)
+            for (const auto &s : students)
             {
                 if (s.getLop() == lop)
                 {
@@ -2776,7 +3018,7 @@ public:
         else
             cout << "Lua chon khong hop le.\n";
     }
-    void filterExams(QuanLyThi& thi)
+    void filterExams(QuanLyThi &thi)
     {
         SetColor(LIGHT_CYAN);
         cout << "\n===== LOC DE THI =====\n";
@@ -2788,13 +3030,13 @@ public:
         {
             string mon = inputLine("Nhap ten mon: ");
             bool found = false;
-            for (const auto& de : thi.getMaDe())
+            for (const auto &de : thi.getMaDe())
             {
                 if (de.tenMon.find(mon) != string::npos)
                 {
                     cout << "ID: " << de.id << " | Mon: " << de.tenMon
-                        << " | Loai: " << (de.loaiThi == 1 ? "Chinh thuc" : "On tap")
-                        << " | Khoa: " << (de.locked ? "Co" : "Khong") << '\n';
+                         << " | Loai: " << (de.loaiThi == 1 ? "Chinh thuc" : "On tap")
+                         << " | Khoa: " << (de.locked ? "Co" : "Khong") << '\n';
                     found = true;
                 }
             }
@@ -2817,12 +3059,12 @@ public:
                 return;
             }
             bool found = false;
-            for (const auto& de : thi.getMaDe())
+            for (const auto &de : thi.getMaDe())
             {
                 if (de.loaiThi == loai)
                 {
                     cout << "ID: " << de.id << " | Mon: " << de.tenMon
-                        << " | Loai: " << (de.loaiThi == 1 ? "Chinh thuc" : "On tap") << '\n';
+                         << " | Loai: " << (de.loaiThi == 1 ? "Chinh thuc" : "On tap") << '\n';
                     found = true;
                 }
             }
@@ -2845,12 +3087,13 @@ public:
                 return;
             }
             bool found = false;
-            for (const auto& de : thi.getMaDe())
+            for (const auto &de : thi.getMaDe())
             {
+                // SỬA LẠI ĐIỀU KIỆN IF NHƯ SAU:
                 if ((trangThai == 1 && de.locked) || (trangThai == 2 && !de.locked))
                 {
                     cout << "ID: " << de.id << " | Mon: " << de.tenMon
-                        << " | Trang thai: " << (de.locked ? "Khoa" : "Mo") << '\n';
+                         << " | Trang thai: " << (de.locked ? "Khoa" : "Mo") << '\n';
                     found = true;
                 }
             }
@@ -2872,7 +3115,7 @@ public:
         {
             int minCapacity = nhapSo<int>("Nhap suc chua toi thieu: ");
             bool found = false;
-            for (const auto& phong : examRooms)
+            for (const auto &phong : examRooms)
             {
                 if (phong.sucChua >= minCapacity)
                 {
@@ -2893,7 +3136,7 @@ public:
                 return;
             }
             bool found = false;
-            for (const auto& phong : examRooms)
+            for (const auto &phong : examRooms)
             {
                 if ((trangThai == 1 && phong.locked) || (trangThai == 2 && !phong.locked))
                 {
@@ -2911,7 +3154,7 @@ public:
                 cout << "Chua co phong thi nao.\n";
                 return;
             }
-            for (const auto& phong : examRooms)
+            for (const auto &phong : examRooms)
             {
                 cout << "ID: " << phong.id << " | Ten: " << phong.tenPhong << " | Suc chua: " << phong.sucChua << " | Trang thai: " << (phong.locked ? "Khoa" : "Mo") << '\n';
             }
@@ -2921,51 +3164,69 @@ public:
     }
 
     // ==================== MENU ====================
-    void adminMenu(QuanLyThi& thi)
+    void adminMenu(QuanLyThi &thi)
     {
         int choice;
         do
         {
             SetColor(LIGHT_CYAN);
             cout << "\n╔═════════════════════════════════════════════╗\n";
+
             SetColor(LIGHT_YELLOW);
             cout << "║              MENU ADMIN TESTPRO             ║\n";
+
             SetColor(LIGHT_CYAN);
             cout << "╠═════════════════════════════════════════════╣\n";
+
             SetColor(LIGHT_GREEN);
             cout << "║ [1]  Them giang vien                        ║\n";
             cout << "║ [2]  Xoa giang vien                         ║\n";
             cout << "║ [3]  Sua giang vien                         ║\n";
             cout << "║ [4]  Xem danh sach giang vien               ║\n";
+
             SetColor(LIGHT_CYAN);
             cout << "╠═════════════════════════════════════════════╣\n";
+
             SetColor(LIGHT_BLUE);
             cout << "║ [5]  Them lop                               ║\n";
             cout << "║ [6]  Xoa lop                                ║\n";
             cout << "║ [7]  Sua lop                                ║\n";
             cout << "║ [8]  Xem danh sach lop                      ║\n";
+
             SetColor(LIGHT_CYAN);
             cout << "╠═════════════════════════════════════════════╣\n";
+
             SetColor(LIGHT_MAGENTA);
             cout << "║ [9]  Xem thong ke he thong                  ║\n";
             cout << "║ [10] Thong ke sinh vien / giang vien        ║\n";
             cout << "║ [11] Quan ly phong thi                      ║\n";
             cout << "║ [12] Xuat bao cao thi                       ║\n";
             cout << "║ [13] Xem thong ke bao cao                   ║\n";
+
             SetColor(LIGHT_CYAN);
             cout << "╠═════════════════════════════════════════════╣\n";
+
             SetColor(LIGHT_YELLOW);
             cout << "║ [14] Luu du lieu                            ║\n";
             cout << "║ [15] Tai du lieu                            ║\n";
             cout << "║ [16] Tim kiem sinh vien                     ║\n";
             cout << "║ [17] Loc de thi                             ║\n";
             cout << "║ [18] Tim phong thi                          ║\n";
+
             SetColor(LIGHT_RED);
             cout << "║ [0]  Thoat                                  ║\n";
+
             SetColor(LIGHT_CYAN);
             cout << "╚═════════════════════════════════════════════╝\n";
 
+            SetColor(7);
+
             SetColor(WHITE);
+
+            SetColor(WHITE);
+
+            SetColor(WHITE);
+
             choice = nhapSo<int>("Chon chuc nang: ");
 
             switch (choice)
@@ -2989,40 +3250,83 @@ public:
                 do
                 {
                     cout << "\n================ Quan ly sinh vien ================\n";
-                    cout << "1. Them sinh vien\n2. Xoa sinh vien\n3. Sua sinh vien\n4. Xem danh sach sinh vien\n0. Thoat\n";
+                    cout << "1. Them sinh vien\n";
+                    cout << "2. Xoa sinh vien\n";
+                    cout << "3. Sua sinh vien\n";
+                    cout << "4. Xem danh sach sinh vien\n";
+                    cout << "0. Thoat\n";
                     l = nhapSo<int>("Chon chuc nang: ");
                     switch (l)
                     {
-                    case 1: addStudent(); break;
-                    case 2: deleteStudent(); break;
-                    case 3: editStudent(); break;
-                    case 4: viewStudents(); break;
-                    case 0: break;
-                    default: cout << "Lua chon khong hop le.\n";
+                    case 1:
+                        addStudent();
+                        break;
+                    case 2:
+                        deleteStudent();
+                        break;
+                    case 3:
+                        editStudent();
+                        break;
+                    case 4:
+                        viewStudents();
+                        break;
+                    case 0:
+                        break;
+                    default:
+                        cout << "Lua chon khong hop le.\n";
                     }
                 } while (l != 0);
             }
             break;
-            case 6: deleteClass(); break;
-            case 7: editClass(); break;
-            case 8: viewClasses(); break;
-            case 9: viewSystemStatistics(); break;
-            case 10: countUsers(); break;
-            case 11: manageExamRooms(); break;
-            case 12: exportExamReport(thi); break;
-            case 13: viewExamStatistics(thi); break;
-            case 14: saveData(); thi.saveDeThi(); break;
-            case 15: loadData(); break;
-            case 16: searchStudent(); break;
-            case 17: filterExams(thi); break;
-            case 18: findExamRooms(); break;
-            case 0: cout << "Thoat chuong trinh.\n"; break;
-            default: cout << "Lua chon khong hop le.\n";
+            case 6:
+                deleteClass();
+                break;
+            case 7:
+                editClass();
+                break;
+            case 8:
+                viewClasses();
+                break;
+            case 9:
+                viewSystemStatistics();
+                break;
+            case 10:
+                countUsers();
+                break;
+            case 11:
+                manageExamRooms();
+                break;
+            case 12:
+                exportExamReport(thi);
+                break;
+            case 13:
+                viewExamStatistics(thi);
+                break;
+            case 14:
+                saveData();
+                thi.saveDeThi();
+                break;
+            case 15:
+                loadData();
+                break;
+            case 16:
+                searchStudent();
+                break;
+            case 17:
+                filterExams(thi);
+                break;
+            case 18:
+                findExamRooms();
+                break;
+            case 0:
+                cout << "Thoat chuong trinh.\n";
+                break;
+            default:
+                cout << "Lua chon khong hop le.\n";
             }
         } while (choice != 0);
     }
 };
-
 void drawLine(int color)
 {
     SetColor(color);
@@ -3043,6 +3347,7 @@ int main()
     adminSystem.loadTeachers("giangvien.txt");
     adminSystem.loadClasses("lophoc.txt");
     adminSystem.loadRooms("phongthi.txt");
+
     adminSystem.loadRanking();
     adminSystem.loadKetQua();
 
@@ -3065,56 +3370,67 @@ int main()
 
     do
     {
+
         drawLine(11);
+
         SetColor(LIGHT_GREEN);
         cout << "        HE THONG QUAN LY THI TRAC NGHIEM\n";
+
         drawLine(11);
+
         SetColor(LIGHT_BLUE);
         cout << "        [1] DANG NHAP ADMIN\n";
+
         SetColor(LIGHT_YELLOW);
         cout << "        [2] DANG NHAP GIANG VIEN\n";
+
         SetColor(LIGHT_MAGENTA);
         cout << "        [3] DANG NHAP SINH VIEN\n";
+
         SetColor(LIGHT_RED);
         cout << "        [0] THOAT CHUONG TRINH\n";
+
         SetColor(WHITE);
 
         vaiTro = nhapSo<int>("\nNhap lua chon: ");
 
         if (vaiTro == 1)
         {
+
             if (adminSystem.loginAdmin())
             {
                 adminSystem.adminMenu(thi);
-                adminSystem.saveData();
-                thi.saveDeThi();
             }
         }
         else if (vaiTro == 2)
         {
+
             ql.layDanhSach().clear();
-            for (auto& t : adminSystem.getTeachers())
+
+            for (auto &t : adminSystem.getTeachers())
             {
                 ql.them(&t);
             }
 
-            Person* user = ql.dangNhap();
+            Person *user = ql.dangNhap();
+
             if (user != nullptr)
             {
+
                 SetColor(GREEN);
                 cout << "Dang nhap thanh cong!\n";
                 SetColor(WHITE);
 
-                GiangVien* gv = dynamic_cast<GiangVien*>(user);
+                GiangVien *gv = dynamic_cast<GiangVien *>(user);
+
                 if (gv != nullptr)
                 {
                     gv->menu(adminSystem.getStudents(), adminSystem.getClasses(), adminSystem.getRooms(), thi);
-                    adminSystem.saveData();
-                    thi.saveDeThi();
                 }
             }
             else
             {
+
                 SetColor(RED);
                 cout << "Dang nhap that bai!\n";
                 SetColor(WHITE);
@@ -3122,34 +3438,39 @@ int main()
         }
         else if (vaiTro == 3)
         {
+
             ql.layDanhSach().clear();
-            for (auto& hs : adminSystem.getStudents())
+
+            for (auto &hs : adminSystem.getStudents())
             {
                 ql.them(&hs);
             }
 
-            Person* user = ql.dangNhap();
+            Person *user = ql.dangNhap();
+
             if (user != nullptr)
             {
+
                 SetColor(GREEN);
                 cout << "Dang nhap thanh cong!\n";
                 SetColor(WHITE);
 
-                SinhVien* hs = dynamic_cast<SinhVien*>(user);
+                SinhVien *hs = dynamic_cast<SinhVien *>(user);
+
                 if (hs != nullptr)
                 {
-                    hs->menu(thi, adminSystem.getStudents());
-                    adminSystem.saveData();
-                    thi.saveDeThi();
+                    hs->menu(thi);
                 }
             }
             else
             {
+
                 SetColor(RED);
                 cout << "Dang nhap that bai!\n";
                 SetColor(WHITE);
             }
         }
+
     } while (vaiTro != 0);
 
     return 0;
