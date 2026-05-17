@@ -1,0 +1,5 @@
+1|Phong A101|30|0
+2|Phong A102|30|0
+3|Phong B201|40|0
+4|Phong B202|40|1
+5|Phong C301|50|0

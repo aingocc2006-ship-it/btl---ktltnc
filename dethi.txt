@@ -1,0 +1,17 @@
+2|CNTT|55|2|1|1|2026-04-09 08:00|2026-04-09 17:00|0|-1|CNTT
+1|Anh Tai co dang cap khong?|Khong|Deo|Nhu c|Nhu l|3
+3|QTKD|50|2|1|0|N/A|N/A|0|-1|ALL
+1|1 + 1 = ?|1|2|3|4|2
+123|CNTT|600|1|1|1|2026-05-16 22:40|2026-05-16 22:50|0|-1|ALL
+1|1 + 1 = ?|1|2|3|4|2
+234|CNTT|600|2|1|2|2026-05-16 22:40|2026-05-16 22:50|0|-1|ALL
+1|1 + 1 = ?|1|2|3|4|2
+345|CNTT|600|2|1|0|N/A|N/A|0|-1|ALL
+1|Bạn có mệt không?|Có|Không|Tùy|Xàm|4
+111|CNTT|600|1|1|1|2026-05-17 01:00|2026-05-17 01:10|0|-1|CNTT01,CNTT02
+1|Ba mẹ có biết bạn là less không?|Có|Không|Hmm|Cả 3 đáp án đều đúng|4
+112|CNTT|600|2|2|0|N/A|N/A|0|-1|CNTT01,CNTT02
+1|Nếu bạn chọn ngẫu nhiên một đáp án cho câu hỏi này, thì xác suất bạn trả lời đúng là bao nhiêu?|25%|50%|0%|25%|2
+2|Tương lai sẽ thế nào? Hãy chọn một đáp án dưới đây:|Bạn sẽ chọn đáp án B|Bạn sẽ chọn đáp án C|Bạn sẽ chọn đáp án A hoặc D|Bạn sẽ chọn đáp án A|1
+1|CNTT|600|1|1|1|2026-05-17 09:30|2026-05-17 09:40|0|-1|CNTT01,CNTT02
+1|Quocle cu to ko?|Co|Be|Hong|Vua vua|2

@@ -1,0 +1,12 @@
+1|LeThiBong|123456|Le Thi Bong|CNTT
+3|NguyenVanCuong|123456|Nguyen Van Cuong|CNTT
+4|PhamThiDung|123456|Pham Thi Dung|NN
+5|HoangVanEm|123456|Hoang Van Em|KT
+2|PhamNgocHan|123456|Pham Ngoc Han|QTKD
+3|TranGiaBao|123456|Tran Gia Bao|CK
+4|VoThanhNha|123456|Vo Thanh Nha|DTVT
+5|NguyenThiMai|123456|Nguyen Thi Mai|KT
+6|DoanQuocKhanh|123456|Doan Quoc Khanh|XD
+7|BuiThanhVy|123456|Bui Thanh Vy|NN
+8|HoangMinhDat|123456|Hoang Minh Dat|AI
+9|LeQuocBao|123456|Le Quoc Bao|ATTT
