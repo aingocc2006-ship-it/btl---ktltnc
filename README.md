@@ -228,3 +228,264 @@ string hashPassword(const string& raw)
 {
     return raw;
 }
+// ========================== TEACHER ==========================
+class GiangVien : public Person
+{
+private:
+    string mon;
+
+public:
+    void setMon(const string& m) { mon = m; }
+    string getMon() const { return mon; }
+
+    GiangVien() : Person() {};
+    GiangVien(int id, string u, string p, string ten, string mon) : Person(id, u, p, ten), mon(mon) {}
+
+    string getRole() const override
+    {
+        return "GiangVien";
+    }
+
+    void hienThiThongTin() const
+    {
+        SetColor(LIGHT_YELLOW);
+        cout << "[GV] " << fullName << " | Mon: " << mon << endl;
+
+        SetColor(WHITE);
+    }
+
+    string chuyenThanhChuoiFile() const
+    {
+        return to_string(id) + "|" + username + "|" + password + "|" + fullName + "|" + mon;
+    }
+
+    void datLaiMatKhau()
+    {
+        string mk;
+
+        SetColor(LIGHT_CYAN);
+        cout << "Nhap MK moi: ";
+
+        SetColor(WHITE);
+        getline(cin, mk);
+
+        password = mk;
+
+        SetColor(LIGHT_GREEN);
+        cout << "Doi mat khau thanh cong!\n";
+
+        SetColor(WHITE);
+    }
+    void xemSinhVien(const vector<SinhVien>& students)
+    {
+        SetColor(LIGHT_CYAN);
+        cout << "\n--- sinh vien LOP CHU NHIEM ---\n";
+        SetColor(WHITE);
+        for (const auto& hs : students)
+        {
+            if (hs.layMaGV() == this->id)
+                hs.hienThiThongTin();
+        }
+    }
+
+    void xemKetQuaThi(const vector<SinhVien>& students)
+    {
+        SetColor(LIGHT_CYAN);
+        cout << "\n===== KET QUA THI LOP CHU NHIEM =====\n";
+
+        for (const auto& hs : students)
+        {
+            if (hs.layMaGV() == this->id)
+            {
+
+                SetColor(LIGHT_YELLOW);
+                cout << "\nSinh vien: " << hs.getFullName() << endl;
+
+                for (const auto& kq : hs.getDanhSachKetQua())
+                {
+
+                    SetColor(LIGHT_GREEN);
+                    cout << "Mon: " << kq.mon
+                        << " | Diem: " << kq.diem
+                        << " | Thoi gian: " << kq.thoiGian << "s\n";
+                }
+            }
+        }
+
+        SetColor(WHITE);
+    }
+
+    void sapXepSinhVienTheoDiem(vector<SinhVien>& students)
+    {
+        vector<SinhVien> ds;
+        for (auto hs : students)
+        {
+            if (hs.layMaGV() == this->id)
+            {
+                ds.push_back(hs);
+            }
+        }
+        sort(ds.begin(), ds.end(), [](SinhVien a, SinhVien b)
+            { return a.layDiem() > b.layDiem(); });
+        SetColor(CYAN);
+        cout << "\n===== SAP XEP sinh vien THEO DIEM =====\n";
+        SetColor(WHITE);
+        for (auto& hs : ds)
+        {
+            cout << hs.getFullName() << " | Diem TB: " << hs.layDiem() << endl;
+        }
+    }
+
+    void thongKe(const vector<SinhVien>& students)
+    {
+        double tong = 0;
+        int dem = 0;
+        for (const auto& hs : students)
+        {
+            if (hs.layMaGV() == this->id)
+            {
+                tong += hs.layDiem();
+                dem++;
+            }
+        }
+        if (dem)
+            cout << "Diem TB: " << tong / dem << endl;
+        else
+            cout << "Khong co du lieu!\n";
+    }
+
+    void thongKeTheoMon(const vector<SinhVien>& students)
+    {
+        string monTK = inputLine("Nhap ten mon muon thong ke: ");
+        SetColor(CYAN);
+
+        cout << "\n--- THONG KE DIEM MON "
+            << monTK
+            << " (CHINH THUC) ---\n";
+
+        SetColor(WHITE);
+        struct HSData
+        {
+            string ten;
+            double diem;
+        };
+        vector<HSData> tk;
+
+        for (const auto& hs : students)
+        {
+            if (hs.layMaGV() == this->id)
+            {
+                double maxDiem = -1;
+                for (const auto& kq : hs.getDanhSachKetQua())
+                {
+                    if (kq.mon == monTK && kq.loaiThi == 1)
+                        maxDiem = max(maxDiem, kq.diem);
+                }
+                if (maxDiem >= 0)
+                    tk.push_back({ hs.getFullName(), maxDiem });
+            }
+        }
+
+        if (tk.empty())
+        {
+            SetColor(YELLOW);
+            cout << "Chua co du lieu thi Chinh thuc mon nay!\n";
+            SetColor(WHITE);
+        }
+        else
+        {
+            sort(tk.begin(), tk.end(), [](const HSData& a, const HSData& b)
+                { return a.diem > b.diem; });
+            for (const auto& data : tk)
+                cout << "HS: " << data.ten << " | Diem mon: " << data.diem << "\n";
+        }
+    }
+
+    void menu(vector<SinhVien>& students, const vector<ClassInfo>& classes, const vector<PhongThi>& examRooms, QuanLyThi& thi)
+    {
+        int choice;
+        do
+        {
+            SetColor(CYAN);
+            cout << "╔══════════════════════════════════════════════╗\n";
+            cout << "║               MENU GIANG VIEN                ║\n";
+            cout << "╠══════════════════════════════════════════════╣\n";
+
+            SetColor(YELLOW);
+            cout << "║  1. Xem danh sach sinh vien                  ║\n";
+            cout << "║  2. Thong ke diem trung binh                 ║\n";
+            cout << "║  3. Quan ly de thi                           ║\n";
+            cout << "║  4. Thong ke theo mon                        ║\n";
+            cout << "║  5. Xem ket qua thi                          ║\n";
+            cout << "║  6. Sap xep sinh vien theo diem              ║\n";
+            cout << "║  7. Doi mat khau                             ║\n";
+            cout << "║  0. Dang xuat                                ║\n";
+
+            SetColor(CYAN);
+            cout << "╚══════════════════════════════════════════════╝\n";
+
+            SetColor(GREEN);
+            choice = nhapSo<int>("Chon chuc nang: ");
+
+            SetColor(WHITE);
+
+            switch (choice)
+            {
+            case 1:
+                SetColor(LIGHT_CYAN);
+                xemSinhVien(students);
+                SetColor(WHITE);
+                break;
+
+            case 2:
+                SetColor(LIGHT_YELLOW);
+                thongKe(students);
+                SetColor(WHITE);
+                break;
+
+            case 3:
+                SetColor(LIGHT_MAGENTA);
+                thi.menu(this->id, this->mon, classes, examRooms);
+                SetColor(WHITE);
+                break;
+
+            case 4:
+                SetColor(LIGHT_BLUE);
+                thongKeTheoMon(students);
+                SetColor(WHITE);
+                break;
+
+            case 5:
+                SetColor(LIGHT_GREEN);
+                xemKetQuaThi(students);
+                SetColor(WHITE);
+                break;
+
+            case 6:
+                SetColor(YELLOW);
+                sapXepSinhVienTheoDiem(students);
+                SetColor(WHITE);
+                break;
+
+            case 7:
+                datLaiMatKhau();
+                SetColor(GREEN);
+                cout << "Doi mat khau thanh cong!\n";
+                SetColor(WHITE);
+                break;
+
+            case 0:
+                SetColor(LIGHT_RED);
+                cout << "Dang xuat thanh cong!\n";
+                SetColor(WHITE);
+                break;
+
+            default:
+                SetColor(RED);
+                cout << "Lua chon khong hop le!\n";
+                SetColor(WHITE);
+            }
+
+        } while (choice != 0);
+    }
+};
