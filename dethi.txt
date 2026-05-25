@@ -1,9 +1,0 @@
-71|Cơ sở Lập trình|600|1|3|1|2026-05-17 11:40|2026-05-17 11:50|0|-1|CNTT1,CNTT2
-1|Ngôn ngữ lập trình C do ai phát triển và vào năm nào?|James Gosling năm 1995|Dennis Ritchie năm 1972|Bjarne Stroustrup năm 1983|Guido van Rossum năm 1991|2
-2|Kiểu dữ liệu nào sau đây dùng để lưu trữ các ký tự trong ngôn ngữ C?|int|float|char|double|3
-3|Để in một giá trị số nguyên ra màn hình trong ngôn ngữ C, ta sử dụng hàm nào?|scanf("%d", &x);|printf("%f", x);|printf("%d", x);|cin >> x;|3
-
-11|Vật liệu và cấu tạo|600|1|3|2|2026-05-17 13:00|2026-05-17 13:10|0|-1|CT1,CT2
-1|Khối lượng thể tích của vật liệu xây dựng được định nghĩa là gì?|Khối lượng của một đơn vị thể tích vật liệu ở trạng thái hoàn toàn đặc (không có lỗ rỗng).|Khối lượng của một đơn vị thể tích vật liệu ở trạng thái tự nhiên (bao gồm cả thể tích lỗ rỗng bên trong vật liệu).|Khối lượng của một đơn vị thể tích vật liệu khi được nghiền nhỏ và sấy khô.|Tỷ số giữa khối lượng của vật liệu và khối lượng của nước ở cùng nhiệt độ.|2
-2|Đá granite (đá hoa cương) dùng trong xây dựng thuộc nhóm đá nào?|Đá trầm tích|Đá biến chất|Đá magma xâm nhập|Đá magma phun trào|3
-3|Bộ phận nào của nhà có chức năng chịu tải trọng từ các tầng truyền xuống và phân bố tải trọng đó lên toàn bộ diện tích nền đất bên dưới?|Móng nhà|Tường chịu lực|Sàn nhà|Mái nhà|1
