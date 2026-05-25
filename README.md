@@ -616,3 +616,853 @@ public:
         return to_string(id) + "|" + username + "|" + password + "|" + fullName;
     }
 };
+// ========================== QUAN LY THI ==========================
+class QuanLyThi
+{
+private:
+    string tenMon;
+    deThi de;
+    vector<KetQua> danhSachKetQua;
+    vector<deThi> maDe;
+
+public:
+    void saveDeThi() const;
+    void loadDeThi();
+    vector<deThi>& getMaDe() { return maDe; }
+    const vector<deThi>& getMaDe() const { return maDe; }
+    QuanLyThi()
+    {
+        maDe = {};
+        tenMon = "Chua dat ten";
+    }
+
+    void thietLapDeThi(int teacherId, string monGiangVien, const vector<ClassInfo>& classes, const vector<PhongThi>& examRooms)
+    {
+        (void)teacherId;
+        (void)examRooms;
+        do
+        {
+            de.loaiThi = nhapSo<int>("Loai bai thi (1. Chinh thuc | 2. On tap): ");
+        } while (de.loaiThi != 1 && de.loaiThi != 2);
+
+        de.tenMon = monGiangVien;
+        
+        // Thêm tên bài thi và kiểm tra trùng tên
+        while (true)
+        {
+            de.tenBaiThi = inputLine("Nhap ten bai thi: ");
+            bool exists = false;
+            string newNameUpper = toUpperCopy(trimString(de.tenBaiThi));
+            for (const auto& d : maDe)
+            {
+                if (toUpperCopy(trimString(d.tenBaiThi)) == newNameUpper)
+                {
+                    exists = true;
+                    break;
+                }
+            }
+            if (!exists)
+                break;
+            cout << "Loi: ten bai thi da ton tai. Vui long nhap lai.\n";
+        }
+        
+        int nextId = 1;
+        for (const auto& d : maDe)
+            nextId = max(nextId, d.id + 1);
+        de.id = nextId;
+
+        de.thoiGianLamBai = nhapSo<int>("Thoi gian lam bai (phut): ");
+        
+        // Tùy chọn random đề
+        int chooseRandom = nhapSo<int>("Random cau hoi? (1. Co | 0. Khong): ");
+        de.randomDe = (chooseRandom == 1);
+        
+
+        de.phongThiId = 0;
+
+        if (de.loaiThi == 2)
+        {
+            de.batDau = 0;
+            de.ketThuc = 0;
+            de.soLanOnTap = -1; // Default: unlimited practice attempts
+        }
+        else
+        {
+            de.soLanOnTap = 1; // Default: official exams can only be taken once
+            do
+            {
+                string batDau = inputLine("Nhap ngay gio bat dau (dd/MM/yyyy HH:mm): ");
+                de.batDau = parseDateTime(batDau);
+                if (de.batDau == 0)
+                    cout << "Dinh dang khong hop le. Thu lai!\n";
+            } while (de.batDau == 0);
+
+            do
+            {
+                string ketThuc = inputLine("Nhap ngay gio ket thuc (dd/MM/yyyy HH:mm): ");
+                de.ketThuc = parseDateTime(ketThuc);
+                if (de.ketThuc == 0 || de.ketThuc <= de.batDau)
+                {
+                    cout << "Khong hop le hoac ket thuc truoc bat dau. Thu lai!\n";
+                    de.ketThuc = 0;
+                }
+            } while (de.ketThuc == 0);
+        }
+
+        de.dsLopDuocThi.clear();
+        if (classes.empty())
+        {
+            SetColor(YELLOW);
+            cout << "Chua co lop nao duoc dang ky. De thi se mo cho toan truong (ALL).\n";
+            SetColor(WHITE);
+        }
+        else
+        {
+            cout << "\n===== DANH SACH LOP HIEN CO =====\n";
+            for (const auto& c : classes)
+            {
+                cout << "ID " << c.id << " | " << c.className << "\n";
+            }
+            cout << "\nNhap ID cac lop duoc thi, cach nhau boi dau ',' (0 = tat ca lop). Ban co the nhap ID so hoac Ten lop: ";
+            string line = inputLine("");
+            stringstream ss(line);
+            string token;
+            vector<string> selectedTokens;
+            bool allClasses = false;
+
+            while (getline(ss, token, ','))
+            {
+                token = trimString(token);
+                if (token.empty()) continue;
+                if (token == "0")
+                {
+                    allClasses = true;
+                    break;
+                }
+                selectedTokens.push_back(token);
+            }
+
+            if (allClasses)
+            {
+                SetColor(LIGHT_GREEN);
+                cout << "De thi se mo cho tat ca lop.\n";
+                SetColor(WHITE);
+            }
+            else
+            {
+                for (const auto& c : classes)
+                {
+                    for (const auto& sel : selectedTokens)
+                    {
+                        if (sel == c.id || sel == c.className)
+                        {
+                            de.dsLopDuocThi.push_back(c.className);
+                            break;
+                        }
+                        int selNum = safeStoi(sel, INT_MIN);
+                        if (selNum != INT_MIN && to_string(selNum) == c.id)
+                        {
+                            de.dsLopDuocThi.push_back(c.className);
+                            break;
+                        }
+                    }
+                }
+
+                // Remove duplicates and normalize list
+                sort(de.dsLopDuocThi.begin(), de.dsLopDuocThi.end());
+                de.dsLopDuocThi.erase(unique(de.dsLopDuocThi.begin(), de.dsLopDuocThi.end()), de.dsLopDuocThi.end());
+
+                if (de.dsLopDuocThi.empty())
+                {
+                    SetColor(YELLOW);
+                    cout << "Khong co lop hop le duoc chon. De thi se mo cho toan truong (ALL).\n";
+                    SetColor(WHITE);
+                }
+                else
+                {
+                    SetColor(GREEN);
+                    cout << "De thi da duoc mo cho cac lop sau:\n";
+                    for (const auto& lop : de.dsLopDuocThi)
+                    {
+                        cout << " - " << lop << "\n";
+                    }
+                    SetColor(WHITE);
+                }
+            }
+        }
+
+        de.locked = false;
+        int m = nhapSo<int>("Nhap so cau hoi cua de: ");
+        de.danhSachCauHoi.clear();
+        for (int i = 0; i < m; i++)
+        {
+            SetColor(LIGHT_YELLOW);
+            cout << "\n--- Nhap cau hoi thu " << i + 1 << " ---\n";
+            SetColor(WHITE);
+            de.themCauHoi();
+        }
+
+        maDe.push_back(de);
+        saveDeThi();
+        SetColor(LIGHT_GREEN);
+        cout << "Tao de thi thanh cong!\n";
+        SetColor(WHITE);
+    }
+
+    void khoaMoDeThi()
+    {
+        string tenBaiThi = inputLine("Nhap ten bai thi can thao tac: ");
+        for (auto& d : maDe)
+        {
+            if (d.tenBaiThi == tenBaiThi)
+            {
+                cout << "1. Khoa de thi\n";
+                cout << "2. Mo de thi va nhap lich thi\n";
+                int action = nhapSo<int>("Chon: ");
+                if (action == 1)
+                {
+                    d.locked = true;
+                    cout << "De thi " << d.tenBaiThi << " da duoc khoa.\n";
+                }
+                else if (action == 2)
+                {
+                    string batDau;
+                    string ketThuc;
+                    time_t startTime = 0;
+                    time_t endTime = 0;
+                    do
+                    {
+                        batDau = inputLine("Nhap ngay gio bat dau (dd/MM/yyyy HH:mm): ");
+                        startTime = parseDateTime(batDau);
+                        if (startTime == 0)
+                        {
+                            cout << "Ngay gio khong hop le. Thu lai!\n";
+                            continue;
+                        }
+                        ketThuc = inputLine("Nhap ngay gio ket thuc (dd/MM/yyyy HH:mm): ");
+                        endTime = parseDateTime(ketThuc);
+                        if (endTime == 0 || endTime <= startTime)
+                        {
+                            cout << "Khong hop le hoac ket thuc truoc bat dau. Thu lai!\n";
+                            continue;
+                        }
+                        break;
+                    } while (true);
+                    d.batDau = startTime;
+                    d.ketThuc = endTime;
+                    d.locked = false;
+                    cout << "De thi " << d.tenBaiThi << " da duoc mo va cap nhat lich thi.\n";
+                }
+                else
+                {
+                    cout << "Lua chon khong hop le.\n";
+                    return;
+                }
+                saveDeThi();
+                return;
+            }
+        }
+        cout << "Khong tim thay de thi!\n";
+    }
+
+    void xoaDe()
+    {
+        string tenBaiThi = inputLine("Nhap ten bai thi can xoa: ");
+        for (size_t i = 0; i < maDe.size(); i++)
+        {
+            if (maDe[i].tenBaiThi == tenBaiThi)
+            {
+                maDe.erase(maDe.begin() + i);
+                saveDeThi();
+                cout << "Xoa de thi '" << tenBaiThi << "' thanh cong!\n";
+                return;
+            }
+        }
+        cout << "Khong tim thay de thi voi ten nay!\n";
+    }
+
+    void xemLichThi()
+    {
+        if (maDe.empty())
+        {
+            cout << "Chua co de thi de hien thi lich.\n";
+            return;
+        }
+        SetColor(CYAN);
+        cout << "\n===== LICH THI =====\n";
+        SetColor(WHITE);
+        time_t now = time(0);
+        for (const auto& d : maDe)
+        {
+            string status;
+            if (d.locked)
+            {
+                status = "Khoa";
+            }
+            else if (d.batDau != 0 && now < d.batDau)
+            {
+                status = "Chua den gio";
+            }
+            else if (d.ketThuc != 0 && now > d.ketThuc)
+            {
+                status = "Da ket thuc";
+            }
+            else
+            {
+                status = "Dang mo";
+            }
+
+            string lopInfo;
+            if (d.dsLopDuocThi.empty())
+                lopInfo = "ALL";
+            else
+            {
+                for (size_t i = 0; i < d.dsLopDuocThi.size(); i++)
+                {
+                    lopInfo += d.dsLopDuocThi[i];
+                    if (i + 1 < d.dsLopDuocThi.size())
+                        lopInfo += ", ";
+                }
+            }
+
+            cout << "Ten bai thi: " << d.tenBaiThi
+                << " | Mon: " << d.tenMon;
+            if (d.phongThiId != 0)
+            {
+                cout << " | Phong: " << d.phongThiId;
+            }
+            cout << " | Bat dau: " << (d.batDau == 0 ? string("Chua co") : formatDateTime(d.batDau))
+                << " | Ket thuc: " << (d.ketThuc == 0 ? string("Chua co") : formatDateTime(d.ketThuc))
+                << " | Lop: " << lopInfo
+                << " | Trang thai: " << status
+                << "\n";
+        }
+    }
+
+    void clearRoomAssignments(int roomId)
+    {
+        for (auto& d : maDe)
+        {
+            if (d.phongThiId == roomId)
+            {
+                d.phongThiId = 0;
+            }
+        }
+    }
+
+    deThi* timDeThi(int id)
+    {
+        for (auto& d : maDe)
+        {
+            if (d.id == id)
+                return &d;
+        }
+        return nullptr;
+    }
+
+    const deThi* timDeThi(int id) const
+    {
+        for (const auto& d : maDe)
+        {
+            if (d.id == id)
+                return &d;
+        }
+        return nullptr;
+    }
+
+    void suaCauHoi()
+    {
+        string tenBaiThi = inputLine("Nhap ten bai thi can sua: ");
+        for (auto& d : maDe)
+        {
+            if (d.tenBaiThi == tenBaiThi)
+            {
+                d.hienThiCauHoi();
+                if (d.danhSachCauHoi.empty())
+                {
+                    SetColor(RED);
+                    cout << "De chua co cau hoi!\n";
+                    SetColor(WHITE);
+                    return;
+                }
+                int idCH = nhapSo<int>("Nhap ID cau hoi can sua: ");
+                for (auto& ch : d.danhSachCauHoi)
+                {
+                    if (ch.id == idCH)
+                    {
+                        cout << "Noi dung moi: ";
+                        getline(cin, ch.noiDung);
+                        for (int i = 0; i < 4; i++)
+                        {
+                            cout << "Lua chon " << i + 1 << ": ";
+                            getline(cin, ch.dapAn[i]);
+                        }
+                        do
+                        {
+                            ch.dapAnDung = nhapSo<int>("Dap an dung (1-4): ");
+                        } while (ch.dapAnDung < 1 || ch.dapAnDung > 4);
+
+                        SetColor(LIGHT_GREEN);
+                        cout << "Sua cau hoi thanh cong!\n";
+                        SetColor(YELLOW);
+                        return;
+                    }
+                }
+                SetColor(LIGHT_RED);
+                cout << "Khong tim thay cau hoi!\n";
+                SetColor(RED);
+                return;
+            }
+        }
+        SetColor(LIGHT_RED);
+        cout << "Khong tim thay de thi!\n";
+        SetColor(WHITE);
+    }
+
+    void xoaCauHoi()
+    {
+        string tenBaiThi = inputLine("Nhap ten bai thi can xoa cau hoi: ");
+        for (auto& d : maDe)
+        {
+            if (d.tenBaiThi == tenBaiThi)
+            {
+                d.hienThiCauHoi();
+                int idCH = nhapSo<int>("Nhap ID cau hoi can xoa: ");
+                auto it = remove_if(d.danhSachCauHoi.begin(), d.danhSachCauHoi.end(), [idCH](const CauHoi& c)
+                    { return c.id == idCH; });
+                if (it != d.danhSachCauHoi.end())
+                {
+                    d.danhSachCauHoi.erase(it, d.danhSachCauHoi.end());
+                    SetColor(GREEN);
+                    cout << "Xoa cau hoi thanh cong!\n";
+                    SetColor(WHITE);
+                }
+                else
+                {
+                    SetColor(RED);
+                    cout << "Khong tim thay cau hoi!\n";
+                    SetColor(WHITE);
+                }
+                return;
+            }
+        }
+
+        SetColor(RED);
+        cout << "Khong tim thay de thi!\n";
+        SetColor(WHITE);
+    }
+
+    void menu(int teacherId, string monGiangVien, const vector<ClassInfo>& classes, const vector<PhongThi>& examRooms)
+    {
+        int ch;
+        do
+        {
+            VeKhungTieuDe("QUAN LY DE THI", YELLOW);
+            cout << "1. Tao de thi moi\n2. Sua cau hoi trong de\n3. Xoa cau hoi trong de\n4. Xem danh sach de thi\n5. Xoa de thi\n6. Khoa/Mo de thi\n7. Xem lich thi\n0. Quay lai\n";
+            ch = nhapSo<int>("Chon: ");
+            switch (ch)
+            {
+            case 1:
+                thietLapDeThi(teacherId, monGiangVien, classes, examRooms);
+                break;
+            case 2:
+                suaCauHoi();
+                break;
+            case 3:
+                xoaCauHoi();
+                break;
+            case 4:
+                for (const auto& d : maDe)
+                {
+                    string loai = (d.loaiThi == 1) ? "[Chinh thuc]" : "[On tap]";
+                    string randomStr = d.randomDe ? " | Tro cau: Co" : " | Tro cau: Khong";
+                    string shuffleStr = d.shuffleAns ? " | Xao DA: Co" : " | Xao DA: Khong";
+                    cout << "Ten bai thi: " << d.tenBaiThi
+                        << " | Mon: " << d.tenMon
+                        << " " << loai
+                        << randomStr
+                        << shuffleStr
+                        << " | Trang thai: " << (d.locked ? "Khoa" : "Mo")
+                        << endl;
+                }
+                break;
+            case 5:
+                xoaDe();
+                break;
+            case 6:
+                khoaMoDeThi();
+                break;
+            case 7:
+                xemLichThi();
+                break;
+            }
+        } while (ch != 0);
+    }
+};
+
+void QuanLyThi::saveDeThi() const
+{
+    ofstream fout("dethi.txt");
+    for (const auto& de : maDe)
+    {
+        fout << de.id << '|' << de.tenMon << '|' << de.tenBaiThi << '|' << de.thoiGianLamBai << '|'
+            << de.loaiThi << '|' << de.danhSachCauHoi.size()
+            << '|' << de.phongThiId << '|' << (de.batDau > 0 ? formatDateTime(de.batDau) : string(""))
+            << '|' << (de.ketThuc > 0 ? formatDateTime(de.ketThuc) : string("")) << '|' << (de.locked ? 1 : 0)
+            << '|' << de.soLanOnTap << '|' << (de.randomDe ? 1 : 0)
+            << '|' << (de.shuffleAns ? 1 : 0) << '|';
+
+        for (size_t i = 0; i < de.dsLopDuocThi.size(); i++)
+        {
+            fout << de.dsLopDuocThi[i] << (i < de.dsLopDuocThi.size() - 1 ? "," : "");
+        }
+        if (de.dsLopDuocThi.empty())
+            fout << "ALL";
+        fout << '\n';
+
+        for (const auto& ch : de.danhSachCauHoi)
+        {
+            fout << ch.id << '|' << ch.noiDung << '|' << ch.dapAn[0] << '|' << ch.dapAn[1] << '|' << ch.dapAn[2] << '|' << ch.dapAn[3] << '|' << ch.dapAnDung << '\n';
+        }
+    }
+    fout.close();
+}
+
+void QuanLyThi::loadDeThi()
+{
+    maDe.clear();
+    ifstream fin("dethi.txt");
+    if (!fin) return;
+
+    vector<string> lines;
+    string line;
+    while (getline(fin, line))
+    {
+        if (!line.empty() && line.back() == '\r')
+            line.pop_back();
+        lines.push_back(line);
+    }
+    fin.close();
+
+    if (lines.empty())
+        return;
+
+    bool isMachineFormat = false;
+    for (const auto& l : lines)
+    {
+        string trimmed = trimString(l);
+        if (trimmed.empty())
+            continue;
+        if (trimmed.find('|') != string::npos)
+            isMachineFormat = true;
+        break;
+    }
+
+    if (isMachineFormat)
+    {
+        for (size_t idx = 0; idx < lines.size(); ++idx)
+        {
+            string current = lines[idx];
+            if (current.empty())
+                continue;
+
+            stringstream ss(current);
+            vector<string> tokens;
+            string token;
+            while (getline(ss, token, '|'))
+                tokens.push_back(token);
+
+            if (tokens.size() < 8)
+                continue;
+
+            deThi de;
+            de.id = safeStoi(tokens[0]);
+            de.tenMon = tokens[1];
+            de.tenBaiThi = tokens[2];
+            de.thoiGianLamBai = safeStoi(tokens[3]);
+            de.loaiThi = safeStoi(tokens[4]);
+            int soCau = safeStoi(tokens[5]);
+            de.phongThiId = safeStoi(tokens[6]);
+
+            string dsLopStr = "";
+            if (tokens.size() >= 13)
+            {
+                de.batDau = parseDateTime(tokens[7]);
+                de.ketThuc = parseDateTime(tokens[8]);
+                de.locked = (tokens[9] == "1");
+                de.soLanOnTap = safeStoi(tokens[10], -1);
+                de.randomDe = (tokens[11] == "1");
+                de.shuffleAns = (tokens[12] == "1");
+                dsLopStr = (tokens.size() > 13 ? tokens[13] : "");
+            }
+            else if (tokens.size() >= 12)
+            {
+                de.batDau = tokens[7].empty() ? 0 : parseDateTime(tokens[7]);
+                de.ketThuc = tokens[8].empty() ? 0 : parseDateTime(tokens[8]);
+                de.locked = (tokens[9] == "1");
+                de.soLanOnTap = safeStoi(tokens[10], -1);
+                de.randomDe = (tokens[11] == "1");
+                de.shuffleAns = false;
+                if (tokens.size() > 12)
+                    dsLopStr = tokens[12];
+            }
+            else
+            {
+                de.batDau = 0;
+                de.ketThuc = 0;
+                de.locked = false;
+                de.soLanOnTap = -1;
+                de.randomDe = false;
+                de.shuffleAns = false;
+                if (tokens.size() > 7)
+                    dsLopStr = tokens[7];
+            }
+
+            if (dsLopStr != "ALL" && !dsLopStr.empty())
+            {
+                stringstream ssLop(dsLopStr);
+                string tenLop;
+                while (getline(ssLop, tenLop, ','))
+                {
+                    tenLop = trimString(tenLop);
+                    if (!tenLop.empty())
+                        de.dsLopDuocThi.push_back(tenLop);
+                }
+            }
+
+            for (int i = 0; i < soCau; i++)
+            {
+                if (idx + 1 >= lines.size())
+                    break;
+                current = lines[++idx];
+                if (!current.empty() && current.back() == '\r')
+                    current.pop_back();
+
+                stringstream s2(current);
+                vector<string> chTk;
+                string c;
+                while (getline(s2, c, '|'))
+                    chTk.push_back(c);
+                if (chTk.size() < 7)
+                    continue;
+
+                CauHoi ch;
+                ch.id = safeStoi(chTk[0]);
+                ch.noiDung = chTk[1];
+                ch.dapAn[0] = chTk[2];
+                ch.dapAn[1] = chTk[3];
+                ch.dapAn[2] = chTk[4];
+                ch.dapAn[3] = chTk[5];
+                ch.dapAnDung = safeStoi(chTk[6]);
+                de.danhSachCauHoi.push_back(ch);
+            }
+            maDe.push_back(de);
+        }
+        return;
+    }
+
+    deThi readableDe;
+    readableDe.id = 1;
+    readableDe.tenMon = "";
+    readableDe.tenBaiThi = "";
+    readableDe.thoiGianLamBai = 0;
+    readableDe.loaiThi = 1;
+    readableDe.phongThiId = 0;
+    readableDe.batDau = 0;
+    readableDe.ketThuc = 0;
+    readableDe.locked = false;
+    readableDe.soLanOnTap = -1;
+    readableDe.randomDe = false;
+    readableDe.shuffleAns = false;
+    readableDe.dsLopDuocThi.clear();
+    readableDe.danhSachCauHoi.clear();
+
+    size_t nextQuestionId = 1;
+    bool foundAnyHeader = false;
+    for (size_t i = 0; i < lines.size(); ++i)
+    {
+        string trimmed = trimString(lines[i]);
+        if (trimmed.empty())
+            continue;
+
+        if (beginsWith(trimmed, "Ma de thi:"))
+        {
+            string idText = extractFieldValue(trimmed, "Ma de thi:");
+            int idValue = extractNumericSuffix(idText);
+            if (idValue <= 0)
+                idValue = 1;
+            readableDe.id = idValue;
+            foundAnyHeader = true;
+        }
+        else if (beginsWith(trimmed, "Ten bai thi:"))
+        {
+            readableDe.tenBaiThi = extractFieldValue(trimmed, "Ten bai thi:");
+            readableDe.tenMon = readableDe.tenBaiThi;
+            foundAnyHeader = true;
+        }
+        else if (beginsWith(trimmed, "TeacherID:"))
+        {
+            readableDe.phongThiId = safeStoi(extractFieldValue(trimmed, "TeacherID:"), 0);
+            foundAnyHeader = true;
+        }
+        else if (beginsWith(trimmed, "Lop duoc thi:"))
+        {
+            readableDe.dsLopDuocThi = parseListSection(lines, i);
+            foundAnyHeader = true;
+        }
+        else if (beginsWith(trimmed, "So cau hoi:"))
+        {
+            foundAnyHeader = true;
+        }
+        else if (beginsWith(trimmed, "Thoi gian lam bai:"))
+        {
+            string value = extractFieldValue(trimmed, "Thoi gian lam bai:");
+            size_t pos = value.find("phut");
+            if (pos != string::npos)
+                value = trimString(value.substr(0, pos));
+            readableDe.thoiGianLamBai = safeStoi(value, 0);
+            foundAnyHeader = true;
+        }
+        else if (beginsWith(trimmed, "Ngay mo de:"))
+        {
+            string value = extractFieldValue(trimmed, "Ngay mo de:");
+            if (value.empty() && i + 1 < lines.size())
+                value = trimString(lines[i + 1]);
+            readableDe.batDau = value.empty() ? 0 : parseDateTime(value);
+            foundAnyHeader = true;
+        }
+        else if (beginsWith(trimmed, "Ngay dong de:"))
+        {
+            string value = extractFieldValue(trimmed, "Ngay dong de:");
+            if (value.empty() && i + 1 < lines.size())
+                value = trimString(lines[i + 1]);
+            readableDe.ketThuc = value.empty() ? 0 : parseDateTime(value);
+            foundAnyHeader = true;
+        }
+        else if (beginsWith(trimmed, "Random cau hoi:"))
+        {
+            readableDe.randomDe = parseYesNo(extractFieldValue(trimmed, "Random cau hoi:"));
+            foundAnyHeader = true;
+        }
+        else if (beginsWith(trimmed, "Shuffle dap an:"))
+        {
+            readableDe.shuffleAns = parseYesNo(extractFieldValue(trimmed, "Shuffle dap an:"));
+            foundAnyHeader = true;
+        }
+        else if (beginsWith(trimmed, "Cho phep thi lai:"))
+        {
+            readableDe.soLanOnTap = parseYesNo(extractFieldValue(trimmed, "Cho phep thi lai:")) ? 1 : -1;
+            foundAnyHeader = true;
+        }
+        else if (beginsWith(trimmed, "Trang thai:"))
+        {
+            string value = extractFieldValue(trimmed, "Trang thai:");
+            if (value.empty() && i + 1 < lines.size())
+                value = trimString(lines[i + 1]);
+            readableDe.locked = !parseYesNo(value);
+            foundAnyHeader = true;
+        }
+    }
+
+    for (size_t idx = 0; idx < lines.size(); ++idx)
+    {
+        string trimmed = trimString(lines[idx]);
+        if (!beginsWith(trimmed, "[Cau"))
+            continue;
+
+        size_t cursor = idx + 1;
+        while (cursor < lines.size() && trimString(lines[cursor]).empty())
+            ++cursor;
+
+        if (cursor >= lines.size())
+            break;
+
+        string questionText = trimString(lines[cursor++]);
+        while (cursor < lines.size())
+        {
+            string nextLine = trimString(lines[cursor]);
+            if (nextLine.empty())
+            {
+                ++cursor;
+                continue;
+            }
+            if (beginsWith(nextLine, "A.") || beginsWith(nextLine, "B.") || beginsWith(nextLine, "C.") || beginsWith(nextLine, "D.") || beginsWith(nextLine, "Dap an dung:") || beginsWith(nextLine, "[Cau"))
+                break;
+            questionText += " " + nextLine;
+            ++cursor;
+        }
+
+        string options[4] = {"", "", "", ""};
+        while (cursor < lines.size())
+        {
+            string nextLine = trimString(lines[cursor]);
+            if (nextLine.empty())
+            {
+                ++cursor;
+                continue;
+            }
+            if (beginsWith(nextLine, "A."))
+            {
+                options[0] = trimString(nextLine.substr(2));
+                ++cursor;
+                continue;
+            }
+            if (beginsWith(nextLine, "B."))
+            {
+                options[1] = trimString(nextLine.substr(2));
+                ++cursor;
+                continue;
+            }
+            if (beginsWith(nextLine, "C."))
+            {
+                options[2] = trimString(nextLine.substr(2));
+                ++cursor;
+                continue;
+            }
+            if (beginsWith(nextLine, "D."))
+            {
+                options[3] = trimString(nextLine.substr(2));
+                ++cursor;
+                continue;
+            }
+            break;
+        }
+
+        int answerIndex = 0;
+        while (cursor < lines.size())
+        {
+            string nextLine = trimString(lines[cursor]);
+            if (nextLine.empty())
+            {
+                ++cursor;
+                continue;
+            }
+            if (beginsWith(nextLine, "Dap an dung:"))
+            {
+                answerIndex = parseAnswerLetter(extractFieldValue(nextLine, "Dap an dung:"));
+                ++cursor;
+                break;
+            }
+            if (beginsWith(nextLine, "[Cau"))
+                break;
+            ++cursor;
+        }
+
+        CauHoi ch;
+        ch.id = static_cast<int>(nextQuestionId++);
+        ch.noiDung = questionText;
+        ch.dapAn[0] = options[0];
+        ch.dapAn[1] = options[1];
+        ch.dapAn[2] = options[2];
+        ch.dapAn[3] = options[3];
+        ch.dapAnDung = answerIndex;
+        readableDe.danhSachCauHoi.push_back(ch);
+    }
+
+    if (foundAnyHeader && !readableDe.danhSachCauHoi.empty())
+    {
+        if (readableDe.tenMon.empty())
+            readableDe.tenMon = readableDe.tenBaiThi;
+        maDe.push_back(readableDe);
+    }
+}
