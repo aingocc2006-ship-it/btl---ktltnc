@@ -5642,3 +5642,133 @@ void drawLine(int color)
     cout << "====================================================\n";
     SetColor(WHITE);
 }
+//==================== MAIN ====================
+int main()
+{
+    SetConsoleOutputCP(CP_UTF8);
+
+    AdminSystem adminSystem;
+    QuanLyNguoiDung ql;
+    QuanLyThi thi;
+
+    if (filesystem::exists("sinhvien_data.txt"))
+        adminSystem.loadStudents("sinhvien_data.txt");
+    else if (filesystem::exists("sinhvien_report.txt"))
+        adminSystem.loadStudentsFromReadableFormat("sinhvien_report.txt");
+
+    adminSystem.loadTeachers("giangvien.txt");
+    adminSystem.loadClasses("lophoc.txt");
+    adminSystem.loadRooms("phongthi.txt");
+    adminSystem.loadRanking();
+    adminSystem.loadKetQua();
+
+    thi.loadDeThi();
+
+    int vaiTro;
+
+    SetColor(LIGHT_CYAN);
+
+    cout << R"(
+
+  /\_/\     ████████╗███████╗███████╗████████╗██████╗ ██████╗  ██████╗ 
+ ( >.< )    ╚══██╔══╝██╔════╝██╔════╝╚══██╔══╝██╔══██╗██╔══██╗██╔═══██╗
+  > ^ <        ██║   █████╗  ███████╗   ██║   ██████╔╝██████╔╝██║   ██║
+ /     \       ██║   ██╔══╝  ╚════██║   ██║   ██╔═══╝ ██╔══██╗██║   ██║
+               ██║   ███████╗███████║   ██║   ██║     ██║  ██║╚██████╔╝ 
+               ╚═╝   ╚══════╝╚══════╝   ╚═╝   ╚═╝     ╚═╝  ╚═╝ ╚═════╝ 
+
+)" << endl;
+
+    do
+    {
+        drawLine(11);
+        SetColor(LIGHT_GREEN);
+        cout << "        HE THONG QUAN LY THI TRAC NGHIEM\n";
+        drawLine(11);
+        SetColor(LIGHT_BLUE);
+        cout << "        [1] DANG NHAP ADMIN\n";
+        SetColor(LIGHT_YELLOW);
+        cout << "        [2] DANG NHAP GIANG VIEN\n";
+        SetColor(LIGHT_MAGENTA);
+        cout << "        [3] DANG NHAP SINH VIEN\n";
+        SetColor(LIGHT_RED);
+        cout << "        [0] THOAT CHUONG TRINH\n";
+        SetColor(WHITE);
+
+        vaiTro = nhapSo<int>("\nNhap lua chon: ");
+
+        if (vaiTro == 1)
+        {
+            if (adminSystem.loginAdmin())
+            {
+                adminSystem.adminMenu(thi);
+                adminSystem.saveData();
+                thi.saveDeThi();
+            }
+        }
+        else if (vaiTro == 2)
+        {
+            ql.layDanhSach().clear();
+            for (auto& t : adminSystem.getTeachers())
+            {
+                ql.them(&t);
+            }
+
+            Person* user = ql.dangNhap();
+            if (user != nullptr)
+            {
+                SetColor(GREEN);
+                cout << "Dang nhap thanh cong!\n";
+                SetColor(WHITE);
+
+                GiangVien* gv = dynamic_cast<GiangVien*>(user);
+                if (gv != nullptr)
+                {
+                    gv->menu(adminSystem.getStudents(), adminSystem.getClasses(), adminSystem.getRooms(), thi);
+                    adminSystem.saveData();
+                    thi.saveDeThi();
+                }
+            }
+            else
+            {
+                SetColor(RED);
+                cout << "Dang nhap that bai!\n";
+                SetColor(WHITE);
+            }
+        }
+        else if (vaiTro == 3)
+        {
+            ql.layDanhSach().clear();
+            for (auto& hs : adminSystem.getStudents())
+            {
+                ql.them(&hs);
+            }
+
+            Person* user = ql.dangNhap();
+            if (user != nullptr)
+            {
+                SetColor(GREEN);
+                cout << "Dang nhap thanh cong!\n";
+                SetColor(WHITE);
+
+                SinhVien* hs = dynamic_cast<SinhVien*>(user);
+                if (hs != nullptr)
+                {
+                    hs->menu(thi, adminSystem.getStudents(), [&adminSystem]() {
+                        adminSystem.rebuildAndSaveRanking();
+                    });
+                    adminSystem.saveData();
+                    thi.saveDeThi();
+                }
+            }
+            else
+            {
+                SetColor(RED);
+                cout << "Dang nhap that bai!\n";
+                SetColor(WHITE);
+            }
+        }
+    } while (vaiTro != 0);
+
+    return 0;
+}
