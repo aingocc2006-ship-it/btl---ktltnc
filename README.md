@@ -2255,3 +2255,684 @@ public:
         } while (choice != 0);
     }
 };
+// ========================== RANK ITEM ==========================
+struct RankItem
+{
+    int id;
+    string fullName;
+    double score;
+};
+
+// ========================== TEACHER ==========================
+// ========================== EXPORT RANKING TO EXCEL (free function) ==========================
+void exportRankingVectorToExcel(const vector<RankItem>& ranking)
+{
+    if (ranking.empty()) return;
+
+    auto xmlEscape = [](const string& s) -> string {
+        string out;
+        for (char c : s) {
+            if      (c == '&')  out += "&amp;";
+            else if (c == '<')  out += "&lt;";
+            else if (c == '>')  out += "&gt;";
+            else if (c == '"')  out += "&quot;";
+            else if (c == '\'') out += "&apos;";
+            else                out += c;
+        }
+        return out;
+    };
+
+    vector<string> sharedStr = { "STT", "ID Sinh Vien", "Ho Ten", "Diem Trung Binh", "Xep Loai" };
+    auto getIdx = [&](const string& val) -> int {
+        for (int i = 0; i < (int)sharedStr.size(); i++)
+            if (sharedStr[i] == val) return i;
+        sharedStr.push_back(val);
+        return (int)sharedStr.size() - 1;
+    };
+    for (const auto& r : ranking) getIdx(r.fullName);
+
+    stringstream sheet;
+    sheet << "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n"
+          << "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><sheetData>";
+    sheet << "<row r=\"1\">";
+    const char* hdrs[] = { "STT", "ID Sinh Vien", "Ho Ten", "Diem Trung Binh", "Xep Loai" };
+    for (int h = 0; h < 5; h++)
+        sheet << "<c r=\"" << (char)('A'+h) << "1\" t=\"s\" s=\"1\"><v>" << getIdx(hdrs[h]) << "</v></c>";
+    sheet << "</row>";
+
+    for (int i = 0; i < (int)ranking.size(); i++) {
+        int row = i + 2;
+        const RankItem& r = ranking[i];
+        string xepLoai;
+        if      (r.score >= 8.5) xepLoai = "Xuat sac";
+        else if (r.score >= 8.0) xepLoai = "Gioi";
+        else if (r.score >= 6.5) xepLoai = "Kha";
+        else if (r.score >= 5.0) xepLoai = "Trung binh";
+        else                     xepLoai = "Yeu";
+        getIdx(xepLoai);
+        sheet << "<row r=\"" << row << "\">"
+              << "<c r=\"A" << row << "\" s=\"2\"><v>" << (i+1) << "</v></c>"
+              << "<c r=\"B" << row << "\" s=\"2\"><v>" << r.id << "</v></c>"
+              << "<c r=\"C" << row << "\" t=\"s\" s=\"2\"><v>" << getIdx(r.fullName) << "</v></c>"
+              << "<c r=\"D" << row << "\" s=\"3\"><v>" << fixed << setprecision(2) << r.score << "</v></c>"
+              << "<c r=\"E" << row << "\" t=\"s\" s=\"2\"><v>" << getIdx(xepLoai) << "</v></c>"
+              << "</row>";
+    }
+    sheet << "</sheetData></worksheet>";
+
+    stringstream sst;
+    sst << "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n"
+        << "<sst xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\""
+        << " count=\"" << sharedStr.size() << "\" uniqueCount=\"" << sharedStr.size() << "\">";
+    for (const auto& s : sharedStr) sst << "<si><t>" << xmlEscape(s) << "</t></si>";
+    sst << "</sst>";
+
+    const string styles =
+        "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n"
+        "<styleSheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">"
+        "<fonts><font><sz val=\"11\"/><name val=\"Arial\"/></font>"
+        "<font><b/><sz val=\"11\"/><name val=\"Arial\"/><color rgb=\"FFFFFFFF\"/></font></fonts>"
+        "<fills><fill><patternFill patternType=\"none\"/></fill>"
+        "<fill><patternFill patternType=\"gray125\"/></fill>"
+        "<fill><patternFill patternType=\"solid\"><fgColor rgb=\"FF1F4E79\"/></patternFill></fill>"
+        "<fill><patternFill patternType=\"solid\"><fgColor rgb=\"FFD9E1F2\"/></patternFill></fill></fills>"
+        "<borders><border><left/><right/><top/><bottom/><diagonal/></border>"
+        "<border><left style=\"thin\"><color rgb=\"FF000000\"/></left>"
+        "<right style=\"thin\"><color rgb=\"FF000000\"/></right>"
+        "<top style=\"thin\"><color rgb=\"FF000000\"/></top>"
+        "<bottom style=\"thin\"><color rgb=\"FF000000\"/></bottom><diagonal/></border></borders>"
+        "<cellStyleXfs count=\"1\"><xf numFmtId=\"0\" fontId=\"0\" fillId=\"0\" borderId=\"0\"/></cellStyleXfs>"
+        "<cellXfs>"
+        "<xf numFmtId=\"0\" fontId=\"0\" fillId=\"0\" borderId=\"0\" xfId=\"0\"/>"
+        "<xf numFmtId=\"0\" fontId=\"1\" fillId=\"2\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf>"
+        "<xf numFmtId=\"0\" fontId=\"0\" fillId=\"3\" borderId=\"1\" xfId=\"0\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf>"
+        "<xf numFmtId=\"2\" fontId=\"0\" fillId=\"3\" borderId=\"1\" xfId=\"0\" applyNumberFormat=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf>"
+        "</cellXfs></styleSheet>";
+    const string workbook =
+        "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n"
+        "<workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\""
+        " xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">"
+        "<sheets><sheet name=\"Bang Xep Hang\" sheetId=\"1\" r:id=\"rId1\"/></sheets></workbook>";
+    const string wbRels =
+        "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n"
+        "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">"
+        "<Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet1.xml\"/>"
+        "<Relationship Id=\"rId2\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings\" Target=\"sharedStrings.xml\"/>"
+        "<Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles\" Target=\"styles.xml\"/>"
+        "</Relationships>";
+    const string pkgRels =
+        "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n"
+        "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">"
+        "<Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"xl/workbook.xml\"/>"
+        "</Relationships>";
+    const string contentTypes =
+        "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n"
+        "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">"
+        "<Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/>"
+        "<Default Extension=\"xml\" ContentType=\"application/xml\"/>"
+        "<Override PartName=\"/xl/workbook.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml\"/>"
+        "<Override PartName=\"/xl/worksheets/sheet1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/>"
+        "<Override PartName=\"/xl/sharedStrings.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml\"/>"
+        "<Override PartName=\"/xl/styles.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml\"/>"
+        "</Types>";
+
+    const string tmp = "xlsx_tmp_bao_cao";
+    filesystem::remove_all(tmp);
+    filesystem::create_directories(tmp + "/xl/worksheets");
+    filesystem::create_directories(tmp + "/xl/_rels");
+    filesystem::create_directories(tmp + "/_rels");
+
+    auto wf = [](const string& path, const string& content) {
+        ofstream f(path, ios::binary); f << content;
+    };
+    wf(tmp + "/[Content_Types].xml", contentTypes);
+    wf(tmp + "/_rels/.rels", pkgRels);
+    wf(tmp + "/xl/workbook.xml", workbook);
+    wf(tmp + "/xl/_rels/workbook.xml.rels", wbRels);
+    wf(tmp + "/xl/worksheets/sheet1.xml", sheet.str());
+    wf(tmp + "/xl/sharedStrings.xml", sst.str());
+    wf(tmp + "/xl/styles.xml", styles);
+
+    filesystem::remove("bao_cao_thi.xlsx");
+    string cmd = "powershell -NoProfile -Command \"Add-Type -Assembly System.IO.Compression.FileSystem; "
+                 "[System.IO.Compression.ZipFile]::CreateFromDirectory('"
+                 + tmp + "', 'bao_cao_thi.xlsx')\"";
+    int ret = system(cmd.c_str());
+    filesystem::remove_all(tmp);
+
+    if (ret == 0 && filesystem::exists("bao_cao_thi.xlsx")) {
+        SetColor(LIGHT_GREEN);
+        cout << "Da cap nhat bao_cao_thi.xlsx\n";
+    } else {
+        SetColor(YELLOW);
+        cout << "Khong the tao file Excel (kiem tra PowerShell).\n";
+    }
+    SetColor(WHITE);
+}
+
+class GiangVien : public Person
+{
+private:
+    string mon;
+    string teacherRole;  // comma-separated roles: "BoMon,CoVan" or "BoMon" or "CoVan"
+    string advisorClass;
+
+    // Parse roles from comma-separated string
+    vector<string> parseRoles() const {
+        vector<string> roles;
+        stringstream ss(teacherRole);
+        string role;
+        while (getline(ss, role, ',')) {
+            if (!role.empty()) {
+                roles.push_back(role);
+            }
+        }
+        return roles;
+    }
+
+public:
+    void setMon(const string& m) { mon = m; }
+    string getMon() const { return mon; }
+    void setTeacherRole(const string& r) { teacherRole = r; }
+    string getTeacherRole() const { return teacherRole; }
+    void setAdvisorClass(const string& c) { advisorClass = c; }
+    string getAdvisorClass() const { return advisorClass; }
+    
+    bool isAdvisor() const {
+        vector<string> roles = parseRoles();
+        for (const auto& r : roles) {
+            if (r == "CoVan" || r == "CoVanHocTap") return true;
+        }
+        return false;
+    }
+    
+    bool isSubjectTeacher() const {
+        vector<string> roles = parseRoles();
+        for (const auto& r : roles) {
+            if (r == "BoMon") return true;
+        }
+        return false;
+    }
+    
+    bool hasRole(const string& role) const {
+        vector<string> roles = parseRoles();
+        for (const auto& r : roles) {
+            if (r == role) return true;
+        }
+        return false;
+    }
+
+    void normalizeTeacherRole() {
+        bool hasBoMon = false;
+        bool hasCoVan = false;
+        vector<string> roles = parseRoles();
+        for (const auto& r : roles) {
+            if (r == "BoMon") hasBoMon = true;
+            if (r == "CoVan" || r == "CoVanHocTap") hasCoVan = true;
+        }
+        if (!hasBoMon && hasCoVan)
+            hasBoMon = true;
+
+        teacherRole.clear();
+        teacherRole = "BoMon";
+        if (hasCoVan)
+            teacherRole += ",CoVan";
+    }
+    
+    string getTeacherRoleLabel() const {
+        vector<string> roles = parseRoles();
+        string label = "";
+        for (size_t i = 0; i < roles.size(); i++) {
+            if (roles[i] == "BoMon") label += (label.empty() ? "BoMon" : ",BoMon");
+            else if (roles[i] == "CoVan" || roles[i] == "CoVanHocTap") {
+                label += (label.empty() ? "CoVan" : ",CoVan");
+            }
+        }
+        return label.empty() ? "BoMon" : label;
+    }
+
+    GiangVien() : Person(), teacherRole("BoMon"), advisorClass("") {};
+    GiangVien(int id, string u, string p, string ten, string mon, string role = "BoMon")
+        : Person(id, u, p, ten), mon(mon), teacherRole(role), advisorClass("") {}
+
+    string getRole() const override
+    {
+        return "GiangVien";
+    }
+
+    void hienThiThongTin() const
+    {
+        SetColor(LIGHT_YELLOW);
+        string roleDisplay = "[";
+        if (isSubjectTeacher()) roleDisplay += "GVBM";
+        if (isSubjectTeacher() && isAdvisor()) roleDisplay += "+";
+        if (isAdvisor()) roleDisplay += "CVHT";
+        roleDisplay += "]";
+        
+        cout << roleDisplay << " " << fullName
+             << " | Mon: " << mon
+             << " | Vai tro: " << getTeacherRoleLabel();
+        if (!advisorClass.empty())
+            cout << " | Lop chu nhiem: " << advisorClass;
+        cout << endl;
+
+        SetColor(WHITE);
+    }
+
+    string chuyenThanhChuoiFile() const
+    {
+        return to_string(id) + "|" + username + "|" + password + "|" + fullName + "|" + mon + "|" + getTeacherRoleLabel() + "|" + advisorClass;
+    }
+
+    void datLaiMatKhau()
+    {
+        string mkCu = inputLine("Nhap mat khau cu: ");
+        if (mkCu != this->password)
+        {
+            SetColor(RED);
+            cout << "Mat khau cu khong dung!\n";
+            SetColor(WHITE);
+            return;
+        }
+        string mkMoi = inputLine("Nhap mat khau moi: ");
+        string mkMoiXacNhan = inputLine("Xac nhan mat khau moi: ");
+        if (mkMoi != mkMoiXacNhan)
+        {
+            SetColor(RED);
+            cout << "Xac nhan mat khau khong dung!\n";
+            SetColor(WHITE);
+            return;
+        }
+        this->password = mkMoi;
+        SetColor(GREEN);
+        cout << "Thay doi mat khau thanh cong!\n";
+        SetColor(WHITE);
+    }
+    void xemSinhVien(const vector<SinhVien>& students, const vector<ClassInfo>& classes)
+    {
+        SetColor(LIGHT_CYAN);
+        cout << "\n--- Danh sach sinh vien giang vien day ---\n";
+        SetColor(WHITE);
+
+        // Get classes this teacher is involved with (advisor or subject teacher)
+        vector<string> classNames = layDanhSachLopDay(classes);
+
+        for (const auto& hs : students)
+        {
+            bool show = false;
+            if (hs.layMaGV() == this->id) show = true;
+            if (!show && !classNames.empty() && find(classNames.begin(), classNames.end(), hs.getLop()) != classNames.end()) show = true;
+
+            if (show) hs.hienThiThongTin();
+        }
+    }
+
+    vector<string> layDanhSachLopDay(const vector<ClassInfo>& classes) const
+    {
+        vector<string> result;
+        for (const auto& c : classes)
+        {
+            if (c.coVanHocTapId == id || find(c.danhSachGiangVien.begin(), c.danhSachGiangVien.end(), id) != c.danhSachGiangVien.end())
+            {
+                result.push_back(c.className);
+            }
+        }
+        sort(result.begin(), result.end());
+        result.erase(unique(result.begin(), result.end()), result.end());
+        return result;
+    }
+
+    void xemKetQuaThi(const vector<SinhVien>& students, const vector<ClassInfo>& classes, const QuanLyThi& thi)
+    {
+        SetColor(LIGHT_CYAN);
+        cout << "\n===== KET QUA THI =====\n";
+
+        vector<string> classNames = layDanhSachLopDay(classes);
+        bool hasAdvisorClass = false;
+        for (const auto& c : classes)
+        {
+            if (c.coVanHocTapId == id)
+            {
+                hasAdvisorClass = true;
+                break;
+            }
+        }
+        bool isAdvisorRole = isAdvisor() || hasAdvisorClass;
+
+        if (isAdvisorRole)
+        {
+            cout << "--- Giao vien co van hoc tap xem ket qua toan lop ---\n";
+            if (classNames.empty())
+            {
+                cout << "Chua co lop duoc phan cong cho giao vien nay.\n";
+            }
+            for (const auto& hs : students)
+            {
+                if (!classNames.empty() && find(classNames.begin(), classNames.end(), hs.getLop()) == classNames.end())
+                    continue;
+
+                SetColor(LIGHT_YELLOW);
+                cout << "\nSinh vien: " << hs.getFullName() << " | Lop: " << hs.getLop() << endl;
+
+                for (const auto& kq : hs.getDanhSachKetQua())
+                {
+                    string tenBaiThi = "";
+                    const deThi* de = thi.timDeThi(kq.maDe);
+                    if (de)
+                        tenBaiThi = de->tenBaiThi;
+                    
+                    SetColor(LIGHT_GREEN);
+                    cout << "Mon: " << kq.mon << " | Ten bai thi: " << tenBaiThi
+                        << " | Diem: " << kq.diem
+                        << " | Thoi gian: " << kq.thoiGian << "s\n";
+                }
+            }
+        }
+        else
+        {
+            cout << "--- Giao vien bo mon xem ket qua mon " << mon << " ---\n";
+            if (classNames.empty())
+            {
+                cout << "Chua duoc phan cong lop. Se hien thi ket qua mon cua tat ca sinh vien.\n";
+            }
+            for (const auto& hs : students)
+            {
+                if (!classNames.empty() && find(classNames.begin(), classNames.end(), hs.getLop()) == classNames.end())
+                    continue;
+
+                bool any = false;
+                for (const auto& kq : hs.getDanhSachKetQua())
+                {
+                    if (kq.mon == mon && kq.loaiThi == 1)
+                    {
+                        if (!any)
+                        {
+                            SetColor(LIGHT_YELLOW);
+                            cout << "\nSinh vien: " << hs.getFullName() << " | Lop: " << hs.getLop() << endl;
+                            any = true;
+                        }
+
+                        SetColor(LIGHT_GREEN);
+                        cout << "Mon: " << kq.mon
+                            << " | Diem: " << kq.diem
+                            << " | Thoi gian: " << kq.thoiGian << "s\n";
+                    }
+                }
+            }
+        }
+
+        SetColor(WHITE);
+    }
+
+
+
+    void sapXepSinhVienTheoDiem(vector<SinhVien>& students, const QuanLyThi& thi)
+    {
+        struct HSScore
+        {
+            int id;
+            string hoTen;
+            string lop;
+            double diem;
+        };
+        vector<HSScore> ds;
+
+        for (const auto& hs : students)
+        {
+            double tong = 0;
+            int dem = 0;
+            for (const auto& kq : hs.getDanhSachKetQua())
+            {
+                if (kq.loaiThi == 1)
+                {
+                    tong += kq.diem;
+                    dem++;
+                }
+            }
+            if (dem > 0)
+            {
+                ds.push_back({ hs.getId(), hs.getFullName(), hs.getLop(), round((tong / dem) * 100.0) / 100.0 });
+            }
+        }
+
+        if (ds.empty())
+        {
+            SetColor(YELLOW);
+            cout << "Chua co sinh vien nao co diem thi chinh thuc!\n";
+            SetColor(WHITE);
+            return;
+        }
+
+        sort(ds.begin(), ds.end(), [](const HSScore& a, const HSScore& b)
+        { return a.diem > b.diem; });
+        
+        SetColor(CYAN);
+        cout << "\n===== BANG XEP HANG TOAN TRUONG (CHINH THUC) =====\n";
+        SetColor(WHITE);
+        for (int i = 0; i < (int)ds.size(); i++)
+        {
+            cout << i + 1 << ". " << ds[i].hoTen << " | Lop: " << ds[i].lop << " | Diem: " << fixed << setprecision(2) << ds[i].diem << "\n";
+        }
+
+        ofstream fout("ranking.txt");
+        for (const auto& item : ds)
+        {
+            fout << item.id << '|' << item.hoTen << '|' << fixed << setprecision(2) << item.diem << '\n';
+        }
+        fout.close();
+        SetColor(GREEN);
+        cout << "\nDa luu bang xep hang toan truong vao ranking.txt\n";
+        SetColor(WHITE);
+
+        // Tự động xuất Excel bao_cao_thi.xlsx
+        vector<RankItem> tmpRanking;
+        for (const auto& item : ds)
+            tmpRanking.push_back({ item.id, item.hoTen, item.diem });
+        exportRankingVectorToExcel(tmpRanking);
+    }
+
+    void thongKe(const vector<SinhVien>& students)
+    {
+        double tong = 0;
+        int dem = 0;
+        for (const auto& hs : students)
+        {
+            if (hs.layMaGV() == this->id)
+            {
+                tong += hs.layDiem();
+                dem++;
+            }
+        }
+        if (dem)
+            cout << "Diem TB: " << tong / dem << endl;
+        else
+            cout << "Khong co du lieu!\n";
+    }
+
+    void thongKeTheoMon(const vector<SinhVien>& students, const vector<ClassInfo>& classes)
+    {
+        string monTK = inputLine("Nhap ten mon muon thong ke: ");
+        SetColor(CYAN);
+
+        cout << "\n--- THONG KE DIEM MON "
+            << monTK
+            << " (CHINH THUC) ---\n";
+
+        SetColor(WHITE);
+        struct HSData
+        {
+            string ten;
+            double diem;
+        };
+        vector<HSData> tk;
+        vector<string> classNames = layDanhSachLopDay(classes);
+        bool isAdvisorRole = isAdvisor();
+
+        if (!isAdvisorRole && monTK != mon)
+        {
+            SetColor(RED);
+            cout << "Chi giao vien bo mon co the xem diem mon: " << mon << "\n";
+            SetColor(WHITE);
+            return;
+        }
+
+        if (classNames.empty())
+        {
+            SetColor(YELLOW);
+            cout << "Giao vien nay chua duoc phan cong lop nao.\n";
+            SetColor(WHITE);
+            return;
+        }
+
+        for (const auto& hs : students)
+        {
+            if (find(classNames.begin(), classNames.end(), hs.getLop()) == classNames.end())
+                continue;
+
+            double tongDiem = 0;
+            int demDiem = 0;
+            for (const auto& kq : hs.getDanhSachKetQua())
+            {
+                if (kq.mon == monTK && kq.loaiThi == 1)
+                {
+                    tongDiem += kq.diem;
+                    demDiem++;
+                }
+            }
+            if (demDiem > 0)
+                tk.push_back({ hs.getFullName(), tongDiem / demDiem });
+        }
+
+        if (tk.empty())
+        {
+            SetColor(YELLOW);
+            cout << "Chua co du lieu thi Chinh thuc mon nay!\n";
+            SetColor(WHITE);
+        }
+        else
+        {
+            sort(tk.begin(), tk.end(), [](const HSData& a, const HSData& b)
+                { return a.diem > b.diem; });
+            for (const auto& data : tk)
+                cout << "HS: " << data.ten << " | Diem mon: " << data.diem << "\n";
+        }
+    }
+
+    void menu(vector<SinhVien>& students, const vector<ClassInfo>& classes, const vector<PhongThi>& examRooms, QuanLyThi& thi)
+    {
+        int choice;
+        do
+        {
+            SetColor(CYAN);
+            cout << "╔══════════════════════════════════════════════╗\n";
+            cout << "║               MENU GIANG VIEN                ║\n";
+            cout << "╠══════════════════════════════════════════════╣\n";
+
+            SetColor(YELLOW);
+            cout << "║  1. Xem danh sach sinh vien                  ║\n";
+            cout << "║  2. Thong ke diem trung binh                 ║\n";
+            cout << "║  3. Quan ly de thi                           ║\n";
+            cout << "║  4. Thong ke theo mon                        ║\n";
+            cout << "║  5. Xem ket qua thi                          ║\n";
+            cout << "║  6. Xem bang xep hang toan truong           ║\n";
+            cout << "║  7. Doi mat khau                             ║\n";
+            cout << "║  0. Dang xuat                                ║\n";
+
+            SetColor(CYAN);
+            cout << "╚══════════════════════════════════════════════╝\n";
+
+            SetColor(GREEN);
+            choice = nhapSo<int>("Chon chuc nang: ");
+
+            SetColor(WHITE);
+
+            switch (choice)
+            {
+            case 1:
+                SetColor(LIGHT_CYAN);
+                xemSinhVien(students, classes);
+                SetColor(WHITE);
+                break;
+
+            case 2:
+                SetColor(LIGHT_YELLOW);
+                thongKe(students);
+                SetColor(WHITE);
+                break;
+
+            case 3:
+                SetColor(LIGHT_MAGENTA);
+                thi.menu(this->id, this->mon, classes, examRooms);
+                SetColor(WHITE);
+                break;
+
+            case 4:
+                SetColor(LIGHT_BLUE);
+                thongKeTheoMon(students, classes);
+                SetColor(WHITE);
+                break;
+
+            case 5:
+                SetColor(LIGHT_GREEN);
+                xemKetQuaThi(students, classes, thi);
+                SetColor(WHITE);
+                break;
+
+            case 6:
+                SetColor(YELLOW);
+                sapXepSinhVienTheoDiem(students, thi);
+                SetColor(WHITE);
+                break;
+
+            case 7:
+                datLaiMatKhau();
+                SetColor(GREEN);
+                cout << "Doi mat khau thanh cong!\n";
+                SetColor(WHITE);
+                break;
+
+            case 0:
+                SetColor(LIGHT_RED);
+                cout << "Dang xuat thanh cong!\n";
+                SetColor(WHITE);
+                break;
+
+            default:
+                SetColor(RED);
+                cout << "Lua chon khong hop le!\n";
+                SetColor(WHITE);
+            }
+
+        } while (choice != 0);
+    }
+};
+// ========================== QUAN LY USER ==========================
+class QuanLyNguoiDung
+{
+private:
+    vector<Person*> users;
+
+public:
+    void them(Person* p) { users.push_back(p); }
+
+    Person* dangNhap()
+    {
+        string u, p;
+        cout << "User: ";
+        cin >> u;
+        cout << "Pass: ";
+        cin >> p;
+        cin.ignore();
+
+        for (auto user : users)
+        {
+            if (user->getUsername() == u && user->getPassword() == p)
+            {
+                return user;
+            }
+        }
+        return NULL;
+    }
+
+    vector<Person*>& layDanhSach() { return users; }
+};
