@@ -1,7 +1,0 @@
-1|NguyenVanAn|123456|Nguyen Van An|CT
-2|LeVanCuong|123456|Le Van Cuong|QLXD
-3|HoangVanEm|123456|Hoang Van Em|VTKT
-4|BuiThanhVy|123456|Bui Thanh Vy|KTXD
-5|HoangMinhDat|123456|Hoang Minh Dat|DDT
-6|TranGiaBao|123456|Tran Gia Bao|CK
-7|LeThiBong|123456|Le Thi Bong|CNTT
