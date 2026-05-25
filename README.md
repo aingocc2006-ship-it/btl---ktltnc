@@ -556,4 +556,41 @@ struct PhongThi
 
     PhongThi() : id(0), tenPhong(""), sucChua(0), locked(false) {}
 };
+// ========================== PERSON ==========================
+class Person
+{
+protected:
+    int id;
+    string username;
+    string password;
+    string fullName;
+
+public:
+    Person() : id(0), username(""), password(""), fullName("") {}
+
+    Person(int id, const string& username, const string& password, const string& fullName)
+        : id(id), username(username), password(password), fullName(fullName)
+    {
+    }
+
+    virtual ~Person() {}
+    virtual string getRole() const = 0;
+
+
+
+    virtual bool login(const string& u, const string& p) const
+    {
+        return u == username && (password == p || password == hashPassword(p));
+    }
+
+    int getId() const { return id; }
+    string getUsername() const { return username; }
+    string getPassword() const { return password; }
+    string getFullName() const { return fullName; }
+    void setId(int newId) { id = newId; }
+    void setUsername(const string& newUsername) { username = newUsername; }
+    void setPassword(const string& newPassword) { password = newPassword; }
+    void setFullName(const string& newFullName) { fullName = newFullName; }
+    
+};
 
