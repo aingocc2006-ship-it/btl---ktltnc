@@ -1,0 +1,2 @@
+1|Nguyen Minh Quan|Lap trinh C/C++|10|10|2|1|
+7|Le Ai Ngoc|Dien cong nghiep|0|42|3|1|
