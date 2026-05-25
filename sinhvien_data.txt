@@ -1,0 +1,10 @@
+1|1|user1|pass1|Nguyen Minh Quan|CNTT02|Nam|12/03/2004|0912345678|8.73|1|Lap trinh C/C++:9.50,Mang may tinh:8.00|10.00
+2|2|user2|pass2|Tran Gia Han|CNTT02|Nu|25/07/2004|0987654321|8.80|1|Lap trinh C/C++:8.80,ython:9.10,Mang may tinh:8.50|0.00
+3|3|user3|pass3|Le Hoang Nam|CNTT02|Nam|08/11/2004|0901122334|7.90|1|Lap trinh C/C++:7.90,Python:7.50,Mang may tinh:8.30|0.00
+4|5|user5|pass5|Vo Thanh Dat|QTKD01|Nam|30/06/2004|0922334455|7.77|26|Marketing:7.50,Ke toan:8.00,Quan tri doanh nghiep van tai:7.80|0.00
+5|6|user6|pass6|Pham Gia Bao|QTKD01|Nam|17/09/2004|0933445566|8.90|26|Marketing:9.00,Ke toan:8.80,Quan tri doanh nghiep van tai:8.90|0.00
+6|7|user7|pass7|Le Minh Tri|QTKD01|Nam|01/12/2004|0944556677|7.50|26|Marketing:7.20,Ke toan:7.80,Quan tri doanh nghiep van tai:7.50|0.00
+7|113|LeAiNgoc|000000|Le Ai Ngoc|KTDTVT02|Nu|31/10/2006||0.00|5||3.33
+8|114|NgoVoAnhTai|000000|Ngo Vo Anh Tai|KTDTVT02|Nam|10/03/2006||0.00|5||0.00
+9|115|MyDieu|000000|My Dieu|KTDTVT02|Khac|2/10/2006||0.00|5||0.00
+10|665|nhung|123456|nhung|KTDTVT02|Nu|10/10/1010|1234567890|9.00|32||6.67
