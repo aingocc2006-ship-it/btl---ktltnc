@@ -50,3 +50,19 @@
                 options[1] = trimString(nextLine.substr(2));
                 ++cursor;
                 continue;
+deThi readableDe;
+    readableDe.id = 1;
+    readableDe.tenMon = "";
+    readableDe.tenBaiThi = "";
+    readableDe.thoiGianLamBai = 0;
+    readableDe.loaiThi = 1;
+    readableDe.phongThiId = 0;
+    readableDe.batDau = 0;
+    readableDe.ketThuc = 0;
+    readableDe.locked = false;
+    readableDe.soLanOnTap = -1;
+    readableDe.randomDe = false;
+    readableDe.shuffleAns = false;
+    readableDe.dsLopDuocThi.clear();
+    readableDe.danhSachCauHoi.clear();
+
