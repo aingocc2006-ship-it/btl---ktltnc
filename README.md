@@ -593,4 +593,26 @@ public:
     void setFullName(const string& newFullName) { fullName = newFullName; }
     
 };
+// ========================== ADMIN ==========================
+class Admin : public Person
+{
+public:
+    Admin() : Person(1, "admin", "admin", "System Admin") {}
 
+    Admin(int id, string u, string p, string ten) : Person(id, u, p, ten) {}
+
+    string getRole() const override
+    {
+        return "Admin";
+    }
+
+    void hienThiThongTin() const
+    {
+        cout << "[ADMIN] " << fullName << endl;
+    }
+
+    string chuyenThanhChuoiFile() const
+    {
+        return to_string(id) + "|" + username + "|" + password + "|" + fullName;
+    }
+};
