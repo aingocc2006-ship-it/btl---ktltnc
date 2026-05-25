@@ -1,5 +1,0 @@
-1|Nguyen Minh Quan|Lap trinh C/C++|10|10|2|1|
-113|Le Ai Ngoc|Dien cong nghiep|6.66667|41|3|1|
-113|Le Ai Ngoc|Lap trinh C/C++|0|50|1|1|
-665|nhung|Dien cong nghiep|6.66667|5|3|1|
-665|nhung|Lap trinh C/C++|5|8|1|1|
