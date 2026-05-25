@@ -2936,3 +2936,2709 @@ public:
 
     vector<Person*>& layDanhSach() { return users; }
 };
+// ========================== ADMIN SYSTEM ==========================
+class AdminSystem
+{
+private:
+    Admin adminAccount;
+    vector<GiangVien> teachers;
+    vector<SinhVien> students;
+    vector<ClassInfo> classes;
+    vector<PhongThi> examRooms;
+    vector<RankItem> ranking;
+    int totalStudents;
+public:
+    AdminSystem() : totalStudents(0) { sortRanking(); }
+
+    vector<ClassInfo>& getClasses() { return classes; }
+    vector<PhongThi>& getRooms() { return examRooms; }
+
+    void sortRanking()
+    {
+        sort(ranking.begin(), ranking.end(), [](const RankItem& a, const RankItem& b)
+            {
+                if (a.score != b.score) return a.score > b.score;
+                return a.fullName < b.fullName;
+            });
+    }
+
+    // Xây lại bảng xếp hạng từ kết quả chính thức và lưu ngay vào ranking.txt
+    void rebuildAndSaveRanking()
+    {
+        ranking.clear();
+        for (const auto& hs : students)
+        {
+            double tong = 0;
+            int dem = 0;
+            for (const auto& kq : hs.getDanhSachKetQua())
+            {
+                if (kq.loaiThi == 1)
+                {
+                    tong += kq.diem;
+                    dem++;
+                }
+            }
+            if (dem > 0)
+            {
+                RankItem r;
+                r.id = hs.getId();
+                r.fullName = hs.getFullName();
+                r.score = tong / dem;
+                ranking.push_back(r);
+            }
+        }
+        sortRanking();
+        saveRanking();
+        saveKetQua();
+        SetColor(10);
+        cout << "[He thong] Da tu dong cap nhat va luu ranking.txt\n";
+        SetColor(7);
+    }
+
+    void assignStudentToClass(SinhVien& student, int selectedLopId)
+    {
+        if (!student.getLop().empty()) {
+            cout << "Sinh viên này đã thuộc biên chế lớp khác!\n";
+            return;
+        }
+
+        int classIdx = findClassIndexById(selectedLopId);
+        if (classIdx == -1) {
+            cout << "Lop khong ton tai.\n";
+            return;
+        }
+
+        ClassInfo& c = classes[classIdx];
+        student.setlopChuNhiem(c.className);
+        student.setTeacherId(c.coVanHocTapId);
+        c.studentCount++;
+
+        cout << "Da phan lop cho sinh vien " << student.getFullName() << " vao lop " << c.className << ".\n";
+    }
+    // ==================== VALIDATION ====================
+    bool isValidName(const string& s) const
+    {
+        if (s.empty())
+            return false;
+        for (char c : s)
+        {
+            unsigned char uc = static_cast<unsigned char>(c);
+            if (!(isalnum(uc) || isspace(uc)))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    bool isValidUsername(const string& s) const
+    {
+        if (s.empty())
+            return false;
+        for (unsigned char uc : s)
+        {
+            
+         if (!isalpha(uc))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    bool isValidPassword(const string& s) const
+    {
+        return s.length() >= 6;
+    }
+    bool isValidDate(const string& date)
+    {
+        regex pattern("^\\d{2}/\\d{2}/\\d{4}$");
+
+        if (!regex_match(date, pattern))
+            return false;
+
+        int day = stoi(date.substr(0, 2));
+        int month = stoi(date.substr(3, 2));
+        int year = stoi(date.substr(6, 4));
+
+        if (month < 1 || month > 12)
+            return false;
+
+        int daysInMonth[] = { 31,28,31,30,31,30,31,31,30,31,30,31 };
+
+    // kiểm tra năm nhuận
+        if ((year % 4 == 0 && year % 100 != 0) || (year % 400 == 0))
+        {
+            daysInMonth[1] = 29;
+        }
+
+        if (day < 1 || day > daysInMonth[month - 1])
+            return false;
+
+        return true;
+    }
+    bool isValidPhone(const string& phone) const
+    {
+        if (phone.length() != 10)
+            return false;
+
+        for (char c : phone)
+        {
+            if (!isdigit(c))
+                return false;
+        }
+
+        return true;
+    }
+
+    bool teacherIdExists(int id) const
+    {
+        for (const auto& t : teachers)
+        {
+            if (t.getId() == id)
+                return true;
+        }
+        return false;
+    }
+    bool isTeacherAlreadyAdvisor(
+    int teacherId,
+    const string& ignoreClassId = string()
+    ) const
+    {
+        for (const auto& c : classes)
+        {
+            if (!ignoreClassId.empty() && c.id == ignoreClassId)                
+            continue;
+
+            if (c.coVanHocTapId == teacherId)
+                return true;
+        }
+        return false;
+    }
+
+    bool studentIdExists(int id) const
+    {
+        for (const auto& hs : students)
+        {
+            if (hs.getId() == id)
+                return true;
+        }
+        return false;
+    }
+
+    bool classIdExists(const string& id) const
+    {
+        for (const auto& c : classes)
+        {
+            if (c.id == id)
+                return true;
+        }
+        return false;
+    }
+
+    bool usernameExists(const string& username) const
+    {
+        if (username == "admin")
+            return true;
+        for (const auto& t : teachers)
+        {
+            if (t.getUsername() == username)
+                return true;
+        }
+        for (const auto& hs : students)
+        {
+            if (hs.getUsername() == username)
+                return true;
+        }
+        return false;
+    }
+
+    int findTeacherIndexById(int id) const
+    {
+        for (int i = 0; i < (int)teachers.size(); i++)
+        {
+            if (teachers[i].getId() == id)
+                return i;
+        }
+        return -1;
+    }
+
+    string getTeacherNameById(int id) const
+    {
+        int idx = findTeacherIndexById(id);
+        return idx == -1 ? "N/A" : teachers[idx].getFullName();
+    }
+
+    bool isSubjectTeacherId(int id) const
+    {
+        int idx = findTeacherIndexById(id);
+        return idx != -1 && teachers[idx].isSubjectTeacher();
+    }
+
+    int findStudentIndexById(int id) const
+    {
+        for (int i = 0; i < (int)students.size(); i++)
+        {
+            if (students[i].getId() == id)
+                return i;
+        }
+        return -1;
+    }
+
+    int findClassIndexById(int id) const
+    {
+        return findClassIndexById(to_string(id));
+    }
+
+    int findClassIndexById(const string& id) const
+    {
+        for (int i = 0; i < (int)classes.size(); i++)
+        {
+            if (classes[i].id == id)
+                return i;
+        }
+        return -1;
+    }
+
+    bool teacherHasAssignedClass(int teacherId) const
+    {
+        for (const auto& c : classes)
+        {
+            if (c.coVanHocTapId == teacherId)
+                return true;
+        }
+        return false;
+    }
+
+    void saveKetQua() const
+    {
+        ofstream fout("ketqua.txt");
+        for (const auto& hs : students)
+        {
+            for (const auto& kq : hs.getDanhSachKetQua())
+            {
+                fout << kq.idSV << '|' << kq.tenSV << '|' << kq.mon << '|' << kq.diem << '|' << kq.thoiGian << '|' << kq.maDe << '|' << kq.loaiThi << '|' <<'\n';
+            }
+        }
+        fout.close();
+    }
+
+    void loadKetQua()
+    {
+        ifstream fin("ketqua.txt");
+        if (!fin) return;
+        string line;
+        while (getline(fin, line))
+        {
+            if (!line.empty() && line.back() == '\r') line.pop_back();
+            if (line.empty()) continue;
+            stringstream ss(line);
+            vector<string> tk; string t;
+            while (getline(ss, t, '|')) tk.push_back(t);
+            if (tk.size() < 7) continue;
+
+            KetQua kq;
+            kq.idSV = safeStoi(tk[0]);
+            kq.tenSV = tk[1];
+            kq.mon = tk[2];
+            kq.diem = safeStod(tk[3]);
+            kq.thoiGian = safeStoi(tk[4]);
+            kq.maDe = safeStoi(tk[5]);
+            kq.loaiThi = safeStoi(tk[6]);
+            
+            for (auto& hs : students)
+            {
+                if (hs.getId() == kq.idSV)
+                {
+                    vector<KetQua> ds = hs.getDanhSachKetQua();
+                    ds.push_back(kq);
+                    hs.setDanhSachKetQua(ds);
+                    break;
+                }
+            }
+        }
+        fin.close();
+    }
+
+    void recalcTotalStudents()
+    {
+        totalStudents = 0;
+        for (const auto& c : classes)
+        {
+            totalStudents += c.studentCount;
+        }
+    }
+
+    // ==================== LOGIN ====================
+    bool loginAdmin()
+    {
+        SetColor(MAGENTA);
+
+        cout << "╔════════════════════════════════════╗\n";
+        cout << "║         DANG NHAP ADMIN            ║\n";
+        cout << "╚════════════════════════════════════╝\n";
+
+        string user, pass;
+
+        SetColor(CYAN);
+        cout << "Username: ";
+        SetColor(WHITE);
+        getline(cin, user);
+
+        SetColor(CYAN);
+        cout << "Password: ";
+        SetColor(WHITE);
+        getline(cin, pass);
+
+        if (adminAccount.login(user, pass))
+        {
+            SetColor(GREEN);
+            cout << "\nDang nhap thanh cong.\n";
+
+            SetColor(WHITE);
+            return true;
+        }
+
+        SetColor(RED);
+        cout << "\nSai username hoac password.\n";
+
+        SetColor(WHITE);
+        return false;
+    }
+
+    //==================== STUDENT CRUD =====================
+    void addStudent()
+    {
+        cout << "\n===== THEM SINH VIEN =====\n";
+        SinhVien hs;
+        hs.setId(nhapSo<int>("Nhap ID sinh vien: "));
+
+        if (studentIdExists(hs.getId()))
+        {
+            cout << "ID sinh vien da ton tai.\n";
+            return;
+        }
+
+        hs.setUsername(inputLine("Nhap username: "));
+        if (!isValidUsername(hs.getUsername()))
+        {
+            cout << "Username khong hop le._.\n";
+            return;
+        }
+        if (usernameExists(hs.getUsername()))
+        {
+            cout << "Username da ton tai.\n";
+            return;
+        }
+
+        hs.setPassword(inputLine("Nhap password: "));
+        if (!isValidPassword(hs.getPassword()))
+        {
+            cout << "Password khong hop le. Toi thieu 6 ky tu.\n";
+            return;
+        }
+
+        hs.setFullName(inputLine("Nhap ho ten: "));
+        if (!isValidName(hs.getFullName()))
+        {
+            cout << "Ho ten khong hop le.\n";
+            return;
+        }
+
+        string tenLop;
+        bool hopLe = false;
+
+        cout << "\n===== DANH SACH LOP =====\n";
+        for (const auto& c : classes)
+        {
+            cout << "- " << c.className << endl;
+        }
+
+        do
+        {
+            tenLop = inputLine("Nhap lop: ");
+            hopLe = false;
+
+            for (const auto& c : classes)
+            {
+                if (c.className == tenLop)
+                {
+                    hopLe = true;
+                    break;
+                }
+            }
+        
+
+            if (!hopLe)
+            {
+                cout << "Lop khong ton tai! Vui long nhap lai.\n";
+            }
+
+        } while (!hopLe);
+
+        hs.setlopChuNhiem(tenLop);
+        int gt;
+
+        do
+        {
+            gt = nhapSo<int>("Nhap gioi tinh (1-Nam, 2-Nu, 3-Khac): ");
+
+            if (gt < 1 || gt > 3)
+            {
+                cout << "Chi duoc nhap 1, 2 hoac 3!\n";
+            }
+
+        }   
+        while (gt < 1 || gt > 3);
+        string gender;
+
+        switch (gt)
+        {
+        case 1:
+            gender = "Nam";
+            break;
+
+        case 2:
+            gender = "Nu";
+            break;
+
+        case 3:
+            gender = "Khac";
+            break;
+        }
+
+        hs.setGioiTinh(gender);
+        string ngaySinh;
+
+        do
+        {
+            ngaySinh = inputLine("Nhap ngay sinh (dd/mm/yyyy): ");
+
+            if (!isValidDate(ngaySinh))
+            {
+                cout << "Ngay sinh khong hop le! Vui long nhap dung dinh dang dd/mm/yyyy.\n";
+            }
+
+        } while (!isValidDate(ngaySinh));
+
+        hs.setBirthDay(ngaySinh);
+        string sdt;
+
+        do
+        {
+            sdt = inputLine("Nhap so dien thoai (10 so): ");
+
+            if (!isValidPhone(sdt))
+            {
+                cout << "So dien thoai khong hop le! Phai gom dung 10 chu so.\n";
+            }
+
+        } while (!isValidPhone(sdt));
+
+        hs.setSdt(sdt);
+        double diemTB;
+
+        do
+        {
+            diemTB = nhapSo<double>("Nhap diem trung binh (0 - 10): ");
+
+            if (diemTB < 0 || diemTB > 10)
+            {
+                cout << "Diem khong hop le! Chi duoc nhap tu 0 den 10.\n";
+            }
+
+        } while (diemTB < 0 || diemTB > 10);
+
+        // Lam tron 2 chu so thap phan
+        diemTB = round(diemTB * 100) / 100;
+
+        hs.setDiemTB(diemTB);
+        int teacherId = nhapSo<int>("Nhap ID giang vien phu trach: ");
+        if (!teacherIdExists(teacherId))
+        {
+            cout << "ID giang vien khong ton tai.\n";
+            return;
+        }
+
+        hs.setTeacherId(teacherId);
+        students.push_back(hs);
+        cout << "Them sinh vien thanh cong.\n";
+    }
+
+    void viewStudents() const
+    {
+        cout << "\n===== DANH SACH SINH VIEN =====\n";
+        if (students.empty())
+        {
+            cout << "Chua co sinh vien nao.\n";
+            return;
+        }
+        for (int i = 0; i < (int)students.size(); i++)
+        {
+            cout << "STT: " << i + 1 << " | ID: " << students[i].getId() << " | Username: " << students[i].getUsername() << " | Full name: " << students[i].getFullName() << '\n';
+        }
+    }
+
+    void editStudent()
+    {
+        cout << "\n===== SUA SINH VIEN =====\n";
+        int id = nhapSo<int>("Nhap ID sinh vien can sua: ");
+        int idx = findStudentIndexById(id);
+        if (idx == -1)
+        {
+            cout << "Khong tim thay sinh vien.\n";
+            return;
+        }
+
+        cout << "1. Sua username\n2. Sua password\n3. Sua ho ten\n4. Sua lop\n5. Sua gioi tinh\n6. Sua ngay sinh\n7. Sua so dien thoai\n8. Sua diem trung binh\n9. Sua giang vien phu trach\n10. Sua tat ca\n";
+        int chHS = nhapSo<int>("Chon: ");
+
+        if (chHS == 1 || chHS == 10)
+        {
+            string newUsername = inputLine("Nhap username moi: ");
+            if (!isValidUsername(newUsername))
+            {
+                cout << "Username khong hop le.\n";
+                return;
+            }
+            if (newUsername != students[idx].getUsername() && usernameExists(newUsername))
+            {
+                cout << "Username da ton tai.\n";
+                return;
+            }
+            students[idx].setUsername(newUsername);
+        }
+        if (chHS == 2 || chHS == 10)
+        {
+            string newPassword = inputLine("Nhap password moi: ");
+            if (!isValidPassword(newPassword))
+            {
+                cout << "Password khong hop le.\n";
+                return;
+            }
+            students[idx].setPassword(newPassword);
+        }
+        if (chHS == 3 || chHS == 10)
+        {
+            string newFullName = inputLine("Nhap ho ten moi: ");
+            if (!isValidName(newFullName))
+            {
+                cout << "Ho ten khong hop le.\n";
+                return;
+            }
+            students[idx].setFullName(newFullName);
+        }
+        if (chHS == 4 || chHS == 10)
+        {
+            string newClass = inputLine("Nhap lop moi: ");
+            students[idx].setlopChuNhiem(newClass);
+        }
+        if (chHS == 5 || chHS == 10)
+        {
+            string newGender = inputLine("Nhap gioi tinh moi: ");
+            students[idx].setGioiTinh(newGender);
+        }
+        if (chHS == 6 || chHS == 10)
+        {
+            string newBirthDay = inputLine("Nhap ngay sinh moi: ");
+            students[idx].setBirthDay(newBirthDay);
+        }
+        if (chHS == 7 || chHS == 10)
+        {
+            string newPhone = inputLine("Nhap so dien thoai moi: ");
+            students[idx].setSdt(newPhone);
+        }
+        if (chHS == 8 || chHS == 10)
+        {
+            double newDiemTB = nhapSo<double>("Nhap diem trung binh moi: ");
+            students[idx].setDiemTB(newDiemTB);
+        }
+        if (chHS == 9 || chHS == 10)
+        {
+            int newTeacherId = nhapSo<int>("Nhap ID giang vien moi: ");
+            if (!teacherIdExists(newTeacherId))
+            {
+                cout << "ID giang vien khong ton tai.\n";
+                return;
+            }
+            students[idx].setTeacherId(newTeacherId);
+        }
+        cout << "Sua sinh vien thanh cong.\n";
+    }
+
+    void deleteStudent()
+    {
+        cout << "\n===== XOA SINH VIEN =====\n";
+        int id = nhapSo<int>("Nhap ID sinh vien can xoa: ");
+        int idx = findStudentIndexById(id);
+        if (idx == -1)
+        {
+            cout << "Khong tim thay sinh vien.\n";
+            return;
+        }
+        students.erase(students.begin() + idx);
+        cout << "Xoa sinh vien thanh cong.\n";
+    }
+
+    vector<SinhVien>& getStudents() { return students; }
+
+    // ==================== TEACHER CRUD ====================
+    void addTeacher()
+    {
+        cout << "\n===== THEM GIANG VIEN =====\n";
+        GiangVien t;
+        t.setId(nhapSo<int>("Nhap ID giang vien: "));
+        if (teacherIdExists(t.getId()))
+        {
+            cout << "ID giang vien da ton tai.\n";
+            return;
+        }
+
+        t.setUsername(inputLine("Nhap username: "));
+        if (!isValidUsername(t.getUsername()))
+        {
+            cout << "Username khong hop le.\n";
+            return;
+        }
+        if (usernameExists(t.getUsername()))
+        {
+            cout << "Username da ton tai.\n";
+            return;
+        }
+
+        t.setPassword(inputLine("Nhap password: "));
+        if (!isValidPassword(t.getPassword()))
+        {
+            cout << "Password phai >= 6 ky tu.\n";
+            return;
+        }
+
+        t.setFullName(inputLine("Nhap ho ten: "));
+        string mon = inputLine("Nhap mon day: ");
+        t.setMon(mon);
+
+        cout << "\n=== Chon vai tro ===\n";
+        cout << "1. Giang vien bo mon\n";
+        cout << "2. Giang vien bo mon kiem co van\n";
+        
+        int roleChoice;
+        do
+        {
+            roleChoice = nhapSo<int>("Chon (1-2): ");
+            if (roleChoice < 1 || roleChoice > 2)
+            {
+                cout << "Lua chon khong hop le.\n";
+            }
+        } while (roleChoice < 1 || roleChoice > 2);
+
+        string roles = (roleChoice == 2 ? "BoMon,CoVan" : "BoMon");
+        t.setTeacherRole(roles);
+        teachers.push_back(t);
+        cout << "Them giang vien thanh cong.\n";
+    }
+
+    void viewTeachers() const
+    {
+        cout << "\n===== DANH SACH GIANG VIEN =====\n";
+        if (teachers.empty())
+        {
+            cout << "Chua co giang vien nao.\n";
+            return;
+        }
+        for (int i = 0; i < (int)teachers.size(); i++)
+        {
+            cout << "STT: " << i + 1
+                << " | ID: " << teachers[i].getId()
+                << " | Username: " << teachers[i].getUsername()
+                << " | Full Name: " << teachers[i].getFullName()
+                << " | Mon: " << teachers[i].getMon()
+                << " | Vai tro: " << teachers[i].getTeacherRoleLabel();
+            if (!teachers[i].getAdvisorClass().empty())
+                cout << " | Lop chu nhiem: " << teachers[i].getAdvisorClass();
+            cout << '\n';
+        }
+    }
+
+    void editTeacher()
+    {
+        cout << "\n===== SUA GIANG VIEN =====\n";
+        int id = nhapSo<int>("Nhap ID giang vien can sua: ");
+        int idx = findTeacherIndexById(id);
+        if (idx == -1)
+        {
+            cout << "Khong tim thay giang vien.\n";
+            return;
+        }
+
+        cout << "1. Sua username\n2. Sua password\n3. Sua ho ten\n4. Sua vai tro\n5. Sua tat ca\n";
+        int choice = nhapSo<int>("Chon: ");
+
+        if (choice == 1 || choice == 5)
+        {
+            string newUsername = inputLine("Nhap username moi: ");
+            if (!isValidUsername(newUsername))
+            {
+                cout << "Username khong hop le.\n";
+                return;
+            }
+            if (newUsername != teachers[idx].getUsername() && usernameExists(newUsername))
+            {
+                cout << "Username da ton tai.\n";
+                return;
+            }
+            teachers[idx].setUsername(newUsername);
+        }
+
+        if (choice == 2 || choice == 5)
+        {
+            string newPassword = inputLine("Nhap password moi: ");
+            if (!isValidPassword(newPassword))
+            {
+                cout << "Password khong hop le.\n";
+                return;
+            }
+            teachers[idx].setPassword(newPassword);
+        }
+
+        if (choice == 3 || choice == 5)
+        {
+            string newFullName = inputLine("Nhap ho ten moi: ");
+            if (!isValidName(newFullName))
+            {
+                cout << "Ho ten khong hop le.\n";
+                return;
+            }
+            teachers[idx].setFullName(newFullName);
+        }
+
+        if (choice == 4 || choice == 5)
+        {
+            cout << "\n=== Chon vai tro moi ===\n";
+            cout << "1. Giang vien bo mon\n";
+            cout << "2. Giang vien bo mon kiem co van\n";
+            
+            int roleChoice;
+            do
+            {
+                roleChoice = nhapSo<int>("Chon (1-2): ");
+                if (roleChoice < 1 || roleChoice > 2)
+                {
+                    cout << "Lua chon khong hop le.\n";
+                }
+            } while (roleChoice < 1 || roleChoice > 2);
+
+            string roles = (roleChoice == 2 ? "BoMon,CoVan" : "BoMon");
+            
+            // If removing CoVan role but teacher currently is advisor, prevent it
+            int thisTeacherId = teachers[idx].getId();
+            bool willBeAdvisor = (roles.find("CoVan") != string::npos);
+            bool currentlyAdvisor = teacherHasAssignedClass(thisTeacherId);
+            if (!willBeAdvisor && currentlyAdvisor)
+            {
+                cout << "Khong the bo vai tro CoVan. Giang vien dang la co van cua mot lop.\n";
+                return;
+            }
+
+            // If will be advisor but currently has no class, require assignment
+            if (willBeAdvisor && !currentlyAdvisor)
+            {
+                // find available classes without advisor
+                vector<int> freeIdx;
+                for (int i = 0; i < (int)classes.size(); i++)
+                {
+                    if (classes[i].coVanHocTapId == 0)
+                        freeIdx.push_back(i);
+                }
+                if (freeIdx.empty())
+                {
+                    cout << "Khong co lop trong de gan cho CoVan. Tao lop truoc khi gan vai tro.\n";
+                    return;
+                }
+                cout << "Chon lop de giao lam CoVan: \n";
+                for (size_t i = 0; i < freeIdx.size(); i++)
+                {
+                    cout << i+1 << ". " << classes[freeIdx[i]].className << "\n";
+                }
+                int pick = nhapSo<int>("Chon (so): ");
+                if (pick < 1 || pick > (int)freeIdx.size())
+                {
+                    cout << "Lua chon khong hop le.\n";
+                    return;
+                }
+                int classIdx = freeIdx[pick-1];
+                classes[classIdx].coVanHocTapId = thisTeacherId;
+                for (int sid : classes[classIdx].students)
+                {
+                    int sidx = findStudentIndexById(sid);
+                    if (sidx != -1) students[sidx].setTeacherId(thisTeacherId);
+                }
+            }
+
+            teachers[idx].setTeacherRole(roles);
+        }
+
+        cout << "Sua giang vien thanh cong.\n";
+    }
+
+    void deleteTeacher()
+    {
+        cout << "\n===== XOA GIANG VIEN =====\n";
+        int id = nhapSo<int>("Nhap ID giang vien can xoa: ");
+        int idx = findTeacherIndexById(id);
+        if (idx == -1)
+        {
+            cout << "Khong tim thay giang vien.\n";
+            return;
+        }
+        if (teacherHasAssignedClass(id))
+        {
+            cout << "Khong the xoa. giang vien dang duoc gan cho lop.\n";
+            return;
+        }
+
+        teachers.erase(teachers.begin() + idx);
+        cout << "Xoa giang vien thanh cong.\n";
+    }
+
+    vector<GiangVien>& getTeachers() { return teachers; }
+
+    // ==================== CLASS CRUD ====================
+    bool teacherIsAdvisorOfAnyClass(int teacherId) const {
+        for (const auto& c : classes) {
+            if (c.coVanHocTapId == teacherId) return true;
+        }
+        return false;
+    }
+
+    string getAdvisorClassName(int teacherId) const
+    {
+        for (const auto& c : classes)
+        {
+            if (c.coVanHocTapId == teacherId)
+                return c.className;
+        }
+
+        return "";
+    }
+
+    void addClass()
+    {
+        int choice;
+
+        do
+        {
+            cout << "\n===== THEM LOP =====\n";
+            cout << "1. Them lop moi\n";
+            cout << "2. Quan ly sinh vien\n";
+            cout << "0. Quay lai\n";
+
+            choice = nhapSo<int>("Chon: ");
+
+            switch (choice)
+            {
+                case 1:
+                {
+                    ClassInfo c;
+
+                    while (true)
+                    {
+                        c.id = inputLine("Nhap ID lop: ");
+
+                        if (c.id.empty())
+                        {
+                            cout << "ID lop khong duoc rong.\n";
+                            continue;
+                        }
+
+                        bool hopLe = true;
+
+                        for (char ch : c.id)
+                        {
+                            if (!isalnum(ch))
+                            {
+                                hopLe = false;
+                                break;
+                            }
+                        }
+
+                        if (!hopLe)
+                        {  
+                            cout << "ID lop chi duoc la so. Khong duoc co ky tu dac biet.\n";
+                            continue;
+                        }
+
+                        if (classIdExists(c.id))
+                        {
+                            cout << "Lop da ton tai.\n";
+                            continue;
+                        }
+
+                        break;
+                }
+
+                    if (classIdExists(c.id))
+                    {
+                        cout << "Them lop khong thanh cong.\n";
+                        break;
+                        return;
+                    }
+
+                    c.className = inputLine("Nhap ten lop: ");
+
+                    if (c.className.empty())
+                {
+                    cout << "Them lop khong thanh cong: Ten lop khong duoc rong.\n";
+                    break;
+                    return;
+                }
+
+                c.studentCount = nhapSo<int>("Nhap so luong sinh vien: ");
+
+                if (c.studentCount < 0)
+                {
+                    cout << "Them lop khong thanh cong: So luong sinh vien khong hop le.\n";
+                    break;
+                    return;
+                }
+
+                c.students.clear();
+
+                for (int i = 0; i < c.studentCount; i++)
+                {
+                    while (true)
+                    {
+                        int idSV = nhapSo<int>(
+                        "Nhap ID sinh vien thu " + to_string(i + 1) + ": ");
+
+                        int idxSV = findStudentIndexById(idSV);
+
+                        if (idxSV == -1)
+                        {
+                            SetColor(YELLOW);
+                            cout << "ID sinh vien khong ton tai.";
+                            SetColor(WHITE);
+                            string createNew = inputLine(" Ban co muon tao sinh vien moi voi ID nay? (y/n): ");
+                            if (createNew.empty() || (createNew[0] != 'y' && createNew[0] != 'Y'))
+                            {
+                                cout << "Bo qua. Nhap lai ID.\n";
+                                continue;
+                            }
+
+                            // Create new student interactively
+                            SinhVien sv;
+                            sv.setId(idSV);
+
+                            // Username
+                            while (true)
+                            {
+                                string uname = inputLine("Nhap username cho sinh vien: ");
+                                if (!isValidUsername(uname))
+                                {
+                                    cout << "Username khong hop le. Chi chua chu cai. Thu lai.\n";
+                                    continue;
+                                }
+                                if (usernameExists(uname))
+                                {
+                                    cout << "Username da ton tai. Thu lai.\n";
+                                    continue;
+                                }
+                                sv.setUsername(uname);
+                                break;
+                            }
+
+                            // Password
+                            while (true)
+                            {
+                                string pw = inputLine("Nhap mat khau (toi thieu 6 ky tu): ");
+                                if (!isValidPassword(pw))
+                                {
+                                    cout << "Mat khau khong hop le. Thu lai.\n";
+                                    continue;
+                                }
+                                sv.setPassword(pw);
+                                break;
+                            }
+
+                            // Full name
+                            while (true)
+                            {
+                                string ten = inputLine("Nhap ho ten: ");
+                                if (!isValidName(ten))
+                                {
+                                    cout << "Ho ten khong hop le. Thu lai.\n";
+                                    continue;
+                                }
+                                sv.setFullName(ten);
+                                break;
+                            }
+
+                            // Gender (optional)
+                            int gt = nhapSo<int>("Nhap gioi tinh (1-Nam,2-Nu,3-Khac): ");
+                            if (gt == 1) sv.setGioiTinh("Nam");
+                            else if (gt == 2) sv.setGioiTinh("Nu");
+                            else sv.setGioiTinh("Khac");
+
+                            sv.setlopChuNhiem(c.className);
+                            sv.setTeacherId(0);
+                            students.push_back(sv);
+                            idxSV = (int)students.size() - 1;
+                            cout << "Tao sinh vien moi thanh cong: " << sv.getFullName() << " (ID " << sv.getId() << ")\n";
+                        }
+
+                        bool daCoLop = false;
+
+                        for (const auto& lop : classes)
+                        {
+                            for (int id : lop.students)
+                            {
+                                if (id == idSV)
+                                {
+                                    daCoLop = true;
+                                    break;
+                                }
+                            }
+
+                            if (daCoLop)
+                                break;
+                        }
+
+                        if (daCoLop)
+                        {
+                            SetColor(YELLOW);
+                            cout << "Sinh vien da co lop. Thu lai.\n";
+                            SetColor(WHITE);
+                            continue;
+                        }
+
+                        c.students.push_back(idSV);
+                        break;
+                    }
+                }
+
+                int advisorId;
+                do
+                {
+                    advisorId = nhapSo<int>("Nhap ID Co van hoc tap cho lop (0 neu chua gan): ");
+                    if (advisorId == 0) break;
+                    if (!teacherIdExists(advisorId))
+                    {
+                        cout << "ID giang vien khong ton tai. Vui long nhap lai.\n";
+                        continue;
+                    }
+                    // Enforce single advisor: teacher cannot be advisor of another class
+                    if (teacherHasAssignedClass(advisorId))
+                    {
+                        cout << "Giang vien nay dang lam co van cua lop khac. Chon giang vien khac.\n";
+                        continue;
+                    }
+                    break;
+                } while (true);
+
+                c.coVanHocTapId = advisorId;
+                    if (c.coVanHocTapId != 0)
+                {
+                    int advisorIdx = findTeacherIndexById(c.coVanHocTapId);
+                    if (advisorIdx != -1 && !teachers[advisorIdx].hasRole("CoVan"))
+                    {
+                        teachers[advisorIdx].setTeacherRole("BoMon,CoVan");
+                    }
+                    for (int idSV : c.students)
+                    {
+                        int idxSV = findStudentIndexById(idSV);
+                        if (idxSV != -1)
+                            students[idxSV].setTeacherId(c.coVanHocTapId);
+                    }
+                }
+
+                string addMore;
+                do
+                {
+                    int teacherId = nhapSo<int>("Nhap ID giang vien bo mon cho lop (0 de dung): ");
+                    if (teacherId == 0)
+                        break;
+                    if (!teacherIdExists(teacherId))
+                    {
+                        cout << "ID giang vien khong ton tai.\n";
+                        continue;
+                    }
+                    if (!isSubjectTeacherId(teacherId))
+                    {
+                        cout << "Chi giang vien bo mon moi duoc them.\n";
+                        continue;
+                    }
+                    if (find(c.danhSachGiangVien.begin(), c.danhSachGiangVien.end(), teacherId) != c.danhSachGiangVien.end())
+                    {
+                        cout << "Giang vien nay da duoc them cho lop.\n";
+                        continue;
+                    }
+                    c.danhSachGiangVien.push_back(teacherId);
+                    addMore = inputLine("Tiep tuc them giang vien bo mon? (y/n): ");
+                } while (!addMore.empty() && (addMore[0] == 'y' || addMore[0] == 'Y'));
+
+                classes.push_back(c);
+
+                SetColor(GREEN);
+                cout << "Them lop thanh cong.\n";
+                SetColor(WHITE);
+
+                break;
+            }
+
+            case 2:
+            {
+                int svChoice;
+
+                do
+                {
+                    cout << "\n===== QUAN LY SINH VIEN =====\n";
+                    cout << "1. Them sinh vien\n";
+                    cout << "2. Sua sinh vien\n";
+                    cout << "3. Xoa sinh vien\n";
+                    cout << "0. Quay lai\n";
+
+                    svChoice = nhapSo<int>("Chon: ");
+
+                    switch (svChoice)
+                    {
+                    case 1:
+                        addStudent();
+                        break;
+
+                    case 2:
+                        editStudent();
+                        break;
+
+                    case 3:
+                        deleteStudent();
+                        break;
+
+                    case 0:
+                        break;
+
+                    default:
+                        cout << "Lua chon khong hop le.\n";
+                    }
+
+                } while (svChoice != 0);
+
+                break;
+            }
+
+            case 0:
+                break;
+
+            default:
+                cout << "Lua chon khong hop le.\n";
+            }
+
+        } while (choice != 0);
+    }
+    void quanLySinhVienTrongLop()
+    {
+        int choice;
+
+        do
+        {
+            cout << "\n===== QUAN LY SINH VIEN =====\n";
+            cout << "1. Them sinh vien\n";
+            cout << "2. Sua sinh vien\n";
+            cout << "3. Xoa sinh vien\n";
+            cout << "0. Quay lai\n";
+
+            choice = nhapSo<int>("Chon: ");
+
+            switch (choice)
+            {
+            case 1:
+                addStudent();
+                break;
+
+            case 2:
+                editStudent();
+                break;
+
+            case 3:
+                deleteStudent();
+                break;
+
+            case 0:
+                break;
+
+            default:
+                cout << "Lua chon khong hop le.\n";
+            }
+
+        } while (choice != 0);
+    }
+    void viewClasses() const
+    {
+        cout << "\n===== DANH SACH LOP =====\n";
+        if (classes.empty())
+        {
+            cout << "Chua co lop nao.\n";
+            return;
+        }
+        for (int i = 0; i < (int)classes.size(); i++)
+        {
+            const auto& c = classes[i];
+            cout << "STT: " << i + 1 << " | ID lop: " << c.id
+                << " | Ten lop: " << c.className
+                << " | CVHT ID: " << c.coVanHocTapId
+                << " (" << getTeacherNameById(c.coVanHocTapId) << ")"
+                << " | So GV day: " << c.danhSachGiangVien.size()
+                << " | So SV: " << c.studentCount << '\n';
+            
+            if (!c.danhSachGiangVien.empty())
+            {
+                cout << "    Danh sach giang vien bo mon: ";
+                for (int j = 0; j < (int)c.danhSachGiangVien.size(); j++)
+                {
+                    int gvId = c.danhSachGiangVien[j];
+                    cout << gvId << "(" << getTeacherNameById(gvId) << ")";
+                    if (j + 1 < (int)c.danhSachGiangVien.size())
+                        cout << ", ";
+                }
+                cout << '\n';
+            }
+            else
+            {
+                cout << "    Danh sach giang vien bo mon: (Chua co)\n";
+            }
+            
+            // Hien thi danh sach sinh vien
+            cout << "    Danh sach sinh vien: ";
+            int countSV = 0;
+            for (const auto& hs : students)
+            {
+                if (hs.getLop() == c.className)
+                {
+                    if (countSV > 0) cout << ", ";
+                    cout << hs.getId() << "(" << hs.getFullName() << ")";
+                    countSV++;
+                }
+            }
+            if (countSV == 0)
+                cout << "(Chua co)";
+            cout << '\n';
+        }
+    }
+
+    void viewClassesFromFile() const
+    {
+        cout << "\n===== DANH SACH LOP TRONG FILE lophoc.txt =====\n";
+        ifstream fin("lophoc.txt");
+        if (!fin)
+        {
+            cout << "Khong tim thay file lophoc.txt.\n";
+            return;
+        }
+        string line;
+        int idx = 1;
+        while (getline(fin, line))
+        {
+            if (line.empty())
+                continue;
+            if (line.back() == '\r') line.pop_back();
+            stringstream ss(line);
+            vector<string> tk;
+            string token;
+            while (getline(ss, token, '|'))
+                tk.push_back(token);
+            if (tk.size() >= 4)
+            {
+                cout << idx++ << ". ID lop: " << tk[1]
+                    << " | Ten lop: " << tk[2]
+                    << " | CVHT ID: " << tk[3]
+                    << " | So SV: " << (tk.size() > 4 ? tk[4] : "0") << '\n';
+            }
+            else
+            {
+                cout << idx++ << ". " << line << '\n';
+            }
+        }
+        fin.close();
+    }
+
+    void editClass()
+    {
+        cout << "\n===== SUA LOP =====\n";
+        string id = inputLine("Nhap ID lop can sua: ");
+        int idx = findClassIndexById(id);
+        if (idx == -1)
+        {
+            cout << "Khong tim thay lop.\n";
+            return;
+        }
+
+        cout << "1. Sua ten lop\n2. Sua giang vien phu trach\n3. Sua so luong sinh vien\n4. Sua tat ca\n5. Quan ly giang vien bo mon cho lop\n";
+        int choice = nhapSo<int>("Chon: ");
+
+        if (choice == 1 || choice == 4)
+        {
+            string newClassName = inputLine("Nhap ten lop moi: ");
+            classes[idx].className = newClassName;
+        }
+
+        if (choice == 2 || choice == 4)
+        {
+            int newTeacherId = nhapSo<int>("Nhap ID giang vien moi (0 neu bo gan): ");
+            if (newTeacherId != 0 && !teacherIdExists(newTeacherId))
+            {
+                cout << "giang vien khong ton tai.\n";
+                return;
+            }
+            // Prevent assigning a teacher who already is advisor of another class
+            if (newTeacherId != 0 && newTeacherId != classes[idx].coVanHocTapId && teacherHasAssignedClass(newTeacherId))
+            {
+                cout << "Giang vien nay dang lam co van cua lop khac. Khong the gan.\n";
+                return;
+            }
+            int oldAdvisorId = classes[idx].coVanHocTapId;
+            classes[idx].coVanHocTapId = newTeacherId;
+            if (oldAdvisorId != 0 && oldAdvisorId != newTeacherId)
+            {
+                int oldIdx = findTeacherIndexById(oldAdvisorId);
+                if (oldIdx != -1)
+                    teachers[oldIdx].setTeacherRole("BoMon");
+            }
+            if (newTeacherId != 0)
+            {
+                int newIdx = findTeacherIndexById(newTeacherId);
+                if (newIdx != -1)
+                    teachers[newIdx].setTeacherRole("BoMon,CoVan");
+                for (int idSV : classes[idx].students)
+                {
+                    int idxSV = findStudentIndexById(idSV);
+                    if (idxSV != -1)
+                        students[idxSV].setTeacherId(newTeacherId);
+                }
+            }
+        }
+
+        if (choice == 3 || choice == 4)
+        {
+            int newStudentCount = nhapSo<int>("Nhap so luong sinh vien moi: ");
+            if (newStudentCount < 0)
+            {
+                cout << "So luong sinh vien khong hop le.\n";
+                return;
+            }
+            classes[idx].studentCount = newStudentCount;
+            recalcTotalStudents();
+        }
+
+        if (choice == 5 || choice == 4)
+        {
+            manageClassTeachers(classes[idx]);
+        }
+
+        saveData();
+
+        cout << "Sua lop thanh cong.\n";
+    }
+
+    void manageClassTeachers(ClassInfo& c)
+    {
+        int choice;
+        do
+        {
+            cout << "\n===== QUAN LY GIANG VIEN BO MON CHO LOP " << c.className << " =====\n";
+            cout << "Co van hoc tap: " << c.coVanHocTapId << " (" << getTeacherNameById(c.coVanHocTapId) << ")\n";
+            cout << "Giang vien bo mon hien co: ";
+            if (c.danhSachGiangVien.empty())
+            {
+                cout << "(Chua co)\n";
+            }
+            else
+            {
+                for (int i = 0; i < (int)c.danhSachGiangVien.size(); i++)
+                {
+                    int gvId = c.danhSachGiangVien[i];
+                    cout << gvId << "(" << getTeacherNameById(gvId) << ")";
+                    if (i + 1 < (int)c.danhSachGiangVien.size())
+                        cout << ", ";
+                }
+                cout << "\n";
+            }
+
+            cout << "1. Gan/Cai dat Co van hoc tap\n";
+            cout << "2. Them giang vien bo mon\n";
+            cout << "3. Xoa giang vien bo mon\n";
+            cout << "0. Quay lai\n";
+            choice = nhapSo<int>("Chon: ");
+
+            if (choice == 1)
+            {
+                int newAdvisorId = nhapSo<int>("Nhap ID Co van hoc tap moi (0 neu bo gan): ");
+                if (newAdvisorId != 0 && !teacherIdExists(newAdvisorId))
+                {
+                    cout << "ID giang vien khong ton tai.\n";
+                    continue;
+                }
+                // Prevent assigning a teacher who is already advisor of another class
+                if (newAdvisorId != 0 && newAdvisorId != c.coVanHocTapId && teacherHasAssignedClass(newAdvisorId))
+                {
+                    cout << "Giang vien nay da la co van cua lop khac. Chon giang vien khac.\n";
+                    continue;
+                }
+                int oldAdvisorId = c.coVanHocTapId;
+                c.coVanHocTapId = newAdvisorId;
+                if (oldAdvisorId != 0 && oldAdvisorId != newAdvisorId)
+                {
+                    int oldIdx = findTeacherIndexById(oldAdvisorId);
+                    if (oldIdx != -1)
+                        teachers[oldIdx].setTeacherRole("BoMon");
+                }
+                if (newAdvisorId != 0)
+                {
+                    int newIdx = findTeacherIndexById(newAdvisorId);
+                    if (newIdx != -1)
+                        teachers[newIdx].setTeacherRole("BoMon,CoVan");
+                    for (int studentId : c.students)
+                    {
+                        int studentIdx = findStudentIndexById(studentId);
+                        if (studentIdx != -1)
+                            students[studentIdx].setTeacherId(newAdvisorId);
+                    }
+                }
+            }
+            else if (choice == 2)
+            {
+                int teacherId = nhapSo<int>("Nhap ID giang vien bo mon can them: ");
+                if (!teacherIdExists(teacherId))
+                {
+                    cout << "ID giang vien khong ton tai.\n";
+                    continue;
+                }
+                if (!isSubjectTeacherId(teacherId))
+                {
+                    cout << "Chi giang vien bo mon moi duoc them.\n";
+                    continue;
+                }
+                if (find(c.danhSachGiangVien.begin(), c.danhSachGiangVien.end(), teacherId) != c.danhSachGiangVien.end())
+                {
+                    cout << "Giang vien nay da duoc them cho lop.\n";
+                    continue;
+                }
+                c.danhSachGiangVien.push_back(teacherId);
+            }
+            else if (choice == 3)
+            {
+                int teacherId = nhapSo<int>("Nhap ID giang vien bo mon can xoa: ");
+                auto it = find(c.danhSachGiangVien.begin(), c.danhSachGiangVien.end(), teacherId);
+                if (it == c.danhSachGiangVien.end())
+                {
+                    cout << "Giang vien nay khong thuoc lop.\n";
+                    continue;
+                }
+                c.danhSachGiangVien.erase(it);
+            }
+            else if (choice != 0)
+            {
+                cout << "Lua chon khong hop le.\n";
+            }
+
+        } while (choice != 0);
+    }
+
+    void deleteClass()
+    {
+        cout << "\n===== XOA LOP =====\n";
+        int id = nhapSo<int>("Nhap ID lop can xoa: ");
+        int idx = findClassIndexById(id);
+        if (idx == -1)
+        {
+            cout << "Khong tim thay lop.\n";
+            return;
+        }
+        if (classes[idx].coVanHocTapId != 0)
+        {
+            int advisorIdx = findTeacherIndexById(classes[idx].coVanHocTapId);
+            if (advisorIdx != -1)
+                teachers[advisorIdx].setTeacherRole("BoMon");
+        }
+
+        classes.erase(classes.begin() + idx);
+        recalcTotalStudents();
+        cout << "Xoa lop thanh cong.\n";
+    }
+
+    // ==================== STATISTICS ====================
+
+    bool roomIdExists(int id) const
+    {
+        for (const auto& r : examRooms)
+        {
+            if (r.id == id)
+                return true;
+        }
+        return false;
+    }
+
+    int findRoomIndexById(int id) const
+    {
+        for (int i = 0; i < (int)examRooms.size(); i++)
+        {
+            if (examRooms[i].id == id)
+                return i;
+        }
+        return -1;
+    }
+
+    void addRoom()
+    {
+        cout << "\n===== THEM PHONG THI =====\n";
+        PhongThi r;
+        r.id = nhapSo<int>("Nhap ID phong thi: ");
+        if (roomIdExists(r.id))
+        {
+            cout << "ID phong thi da ton tai.\n";
+            return;
+        }
+        r.tenPhong = inputLine("Nhap ten phong: ");
+        r.sucChua = nhapSo<int>("Nhap suc chua: ");
+        r.locked = false;
+        examRooms.push_back(r);
+        cout << "Them phong thi thanh cong.\n";
+    }
+
+    void viewRooms() const
+    {
+        cout << "\n===== DANH SACH PHONG THI =====\n";
+        if (examRooms.empty())
+        {
+            cout << "Chua co phong thi nao.\n";
+            return;
+        }
+        for (int i = 0; i < (int)examRooms.size(); i++)
+        {
+            cout << "STT: " << i + 1 << " | ID: " << examRooms[i].id << " | Ten phong: " << examRooms[i].tenPhong
+                << " | Suc chua: " << examRooms[i].sucChua
+                << " | Trang thai: " << (examRooms[i].locked ? "Khoa" : "Mo") << '\n';
+        }
+    }
+
+    void editRoom()
+    {
+        cout << "\n===== SUA PHONG THI =====\n";
+        int id = nhapSo<int>("Nhap ID phong thi can sua: ");
+        int idx = findRoomIndexById(id);
+        if (idx == -1)
+        {
+            cout << "Khong tim thay phong thi.\n";
+            return;
+        }
+        cout << "1. Sua ten phong\n2. Sua suc chua\n3. Khoa/Mo phong\n4. Sua tat ca\n";
+        int choice = nhapSo<int>("Chon: ");
+        if (choice == 1 || choice == 4)
+        {
+            examRooms[idx].tenPhong = inputLine("Nhap ten phong moi: ");
+        }
+        if (choice == 2 || choice == 4)
+        {
+            examRooms[idx].sucChua = nhapSo<int>("Nhap suc chua moi: ");
+        }
+        if (choice == 3 || choice == 4)
+        {
+            examRooms[idx].locked = !examRooms[idx].locked;
+            cout << "Phong thi da " << (examRooms[idx].locked ? "duoc khoa" : "duoc mo") << ".\n";
+        }
+        cout << "Sua phong thi thanh cong.\n";
+    }
+
+    void deleteRoom(QuanLyThi& thi)
+    {
+        cout << "\n===== XOA PHONG THI =====\n";
+        int id = nhapSo<int>("Nhap ID phong thi can xoa: ");
+        int idx = findRoomIndexById(id);
+        if (idx == -1)
+        {
+            cout << "Khong tim thay phong thi.\n";
+            return;
+        }
+        thi.clearRoomAssignments(id);
+        examRooms.erase(examRooms.begin() + idx);
+        thi.saveDeThi();
+        cout << "Xoa phong thi thanh cong.\n";
+    }
+
+    void manageExamRooms(QuanLyThi& thi)
+    {
+        int choice;
+        do
+        {
+            cout << "\n===== QUAN LY PHONG THI =====\n";
+            cout << "1. Them phong thi\n2. Sua phong thi\n3. Xoa phong thi\n4. Xem phong thi\n0. Quay lai\n";
+            choice = nhapSo<int>("Chon: ");
+            switch (choice)
+            {
+            case 1:
+                addRoom();
+                break;
+            case 2:
+                editRoom();
+                break;
+            case 3:
+                deleteRoom(thi);
+                break;
+            case 4:
+                viewRooms();
+                break;
+            }
+        } while (choice != 0);
+    }
+
+    void exportExamReport(const QuanLyThi& thi) const
+    {
+        ofstream fout("bao_cao_thi.txt");
+        fout << "ID GV|Ten GV|ID Lop|Lop|So Sinh Vien|So Cau Hoi|Thoi Gian Thi (Phut)|Ngay Gio Thi\n";
+
+        for (const auto& de : thi.getMaDe())
+        {
+            if (de.loaiThi != 1) continue;
+            int gvId = 0;
+            string gvName = "N/A";
+            for (const auto& t : teachers) {
+                if (t.getMon() == de.tenMon) {
+                    gvId = t.getId();
+                    gvName = t.getFullName();
+                    break;
+                }
+            }
+
+            for (const string& tenLop : de.dsLopDuocThi)
+            {
+                string idLop = "";
+                int soSV = 0;
+
+                for (const auto& c : classes) {
+                    if (c.className == tenLop) {
+                        idLop = c.id;
+                        break;
+                    }
+                }
+
+                for (const auto& hs : students) {
+                    if (hs.getLop() == tenLop) soSV++;
+                }
+
+                fout << gvId << "|"
+                    << gvName << "|"
+                    << idLop << "|"
+                    << tenLop << "|"
+                    << soSV << "|"
+                    << de.danhSachCauHoi.size() << "|"
+                    << de.thoiGianLamBai << "|"
+                    << formatDateTime(de.batDau) << "\n";
+            }
+        }
+        fout.close();
+        SetColor(LIGHT_GREEN);
+        cout << "Xuat bao cao thi thanh cong: bao_cao_thi.txt\n";
+        SetColor(WHITE);
+    }
+
+    void exportExamReportCSV(const QuanLyThi& thi) const
+    {
+        ofstream fout("bao_cao_thi.csv");
+        fout << "ID GV,Ten GV,ID Lop,Lop,So Sinh Vien,So Cau Hoi,Thoi Gian Thi (Phut),Ngay Gio Thi\n";
+
+        for (const auto& de : thi.getMaDe())
+        {
+            if (de.loaiThi != 1) continue;
+            int gvId = 0;
+            string gvName = "N/A";
+            for (const auto& t : teachers) {
+                if (t.getMon() == de.tenMon) {
+                    gvId = t.getId();
+                    gvName = t.getFullName();
+                    break;
+                }
+            }
+
+            for (const string& tenLop : de.dsLopDuocThi)
+            {
+                string idLop = "";
+                int soSV = 0;
+
+                for (const auto& c : classes) {
+                    if (c.className == tenLop) {
+                        idLop = c.id;
+                        break;
+                    }
+                }
+
+                for (const auto& hs : students) {
+                    if (hs.getLop() == tenLop) soSV++;
+                }
+
+                fout << gvId << ","
+                    << gvName << ","
+                    << idLop << ","
+                    << tenLop << ","
+                    << soSV << ","
+                    << de.danhSachCauHoi.size() << ","
+                    << de.thoiGianLamBai << ","
+                    << formatDateTime(de.batDau) << "\n";
+            }
+        }
+        fout.close();
+        SetColor(LIGHT_GREEN);
+        cout << "Xuat bao cao CSV thanh cong: bao_cao_thi.csv\n";
+        SetColor(WHITE);
+    }
+
+    void viewExamStatistics(const QuanLyThi& thi) const
+    {
+        cout << "\n===== THONG KE BAO CAO THI =====\n";
+        if (students.empty())
+        {
+            cout << "Chua co sinh vien!\n";
+            return;
+        }
+        map<int, vector<double>> examScores;
+        for (const auto& hs : students)
+        {
+            for (const auto& kq : hs.getDanhSachKetQua())
+            {
+                examScores[kq.maDe].push_back(kq.diem);
+            }
+        }
+        if (examScores.empty())
+        {
+            cout << "Chua co ket qua thi de thong ke.\n";
+            return;
+        }
+        for (const auto& exam : examScores)
+        {
+            const deThi* de = thi.timDeThi(exam.first);
+            if (!de)
+                continue;
+            const auto& scores = exam.second;
+            double sum = 0;
+            double maxScore = 0;
+            double minScore = 10;
+            for (double v : scores)
+            {
+                sum += v;
+                maxScore = max(maxScore, v);
+                minScore = min(minScore, v);
+            }
+            double avg = sum / scores.size();
+            cout << "Ten bai thi: " << de->tenBaiThi << " | Mon: " << de->tenMon << " | So luot thi: " << scores.size() 
+                 << " | Diem TB: " << fixed << setprecision(2) << avg 
+                 << " | Min: " << minScore << " | Max: " << maxScore << '\n';
+            
+            // Biểu đồ ASCII
+            SetColor(LIGHT_GREEN);
+            cout << "Bieu do diem: ";
+            int barLength = min((int)scores.size(), 20);
+            for (int i = 0; i < barLength; i++)
+                cout << "#";
+            cout << "\n";
+            SetColor(WHITE);
+        }
+    }
+
+    void saveRooms() const
+    {
+        ofstream fout("phongthi.txt");
+        for (const auto& r : examRooms)
+        {
+            fout << r.id << '|' << r.tenPhong << '|' << r.sucChua << '|' << (r.locked ? 1 : 0) << '\n';
+        }
+    }
+
+    void loadRooms(const string& fileName)
+    {
+        examRooms.clear();
+        ifstream fin(fileName);
+        if (!fin) return;
+        string line;
+        while (getline(fin, line))
+        {
+            if (!line.empty() && line.back() == '\r') line.pop_back();
+            if (line.empty()) continue;
+            stringstream ss(line);
+            vector<string> tk; string t;
+            while (getline(ss, t, '|')) tk.push_back(t);
+            if (tk.size() < 4) continue;
+
+            PhongThi r;
+            r.id = safeStoi(tk[0]);
+            r.tenPhong = tk[1];
+            r.sucChua = safeStoi(tk[2]);
+            r.locked = (tk[3] == "1");
+            examRooms.push_back(r);
+        }
+        fin.close();
+        cout << "Tai danh sach phong thi thanh cong.\n";
+    }
+
+    void viewSystemStatistics() const
+    {
+        cout << "\n===== THONG KE HOC SINH & GIAO VIEN =====\n";
+        if (classes.empty()) {
+            cout << "Chua co lop nao trong he thong.\n";
+            return;
+        }
+
+        for (const auto& c : classes)
+        {
+            cout << "\n--- Lop: " << c.className << " ---\n";
+
+            bool foundCVHT = false;
+            for (const auto& t : teachers)
+            {
+                if (t.getId() == c.coVanHocTapId)
+                {
+                    cout << ">> Co van hoc tap: " << t.getFullName() << " (ID: " << t.getId() << ")\n";
+                    foundCVHT = true;
+                    break;
+                }
+            }
+            if (!foundCVHT)
+                cout << ">> Co van hoc tap: (Chua co)\n";
+
+            bool foundDayLop = false;
+            cout << ">> Giang vien day lop:\n";
+            for (int gvId : c.danhSachGiangVien)
+            {
+                int idxT = findTeacherIndexById(gvId);
+                if (idxT != -1)
+                {
+                    cout << "   - " << teachers[idxT].getFullName() << " (Mon: " << teachers[idxT].getMon() << ")\n";
+                    foundDayLop = true;
+                }
+            }
+            if (!foundDayLop)
+                cout << "   (Chua co)\n";
+
+            cout << ">> Danh sach sinh vien:\n";
+            int countSV = 0;
+            for (const auto& hs : students)
+            {
+                if (hs.getLop() == c.className)
+                {
+                    cout << "   - " << hs.getFullName() << " (ID: " << hs.getId() << ")\n";
+                    countSV++;
+                }
+            }
+            if (countSV == 0)
+                cout << "   (Khong co sinh vien nao)\n";
+
+            double sumDiem = 0;
+            int countDiem = 0;
+            for (const auto& hs : students)
+            {
+                if (hs.getLop() != c.className)
+                    continue;
+                for (const auto& kq : hs.getDanhSachKetQua())
+                {
+                    if (kq.loaiThi == 1)
+                    {
+                        sumDiem += kq.diem;
+                        countDiem++;
+                    }
+                }
+            }
+            if (countDiem > 0)
+            {
+                double avg = sumDiem / countDiem;
+                cout << "=> Diem trung binh lop: " << fixed << setprecision(2) << avg << "\n";
+            }
+            else
+            {
+                cout << "=> Chua co ket qua thi chinh thuc de tinh diem trung binh.\n";
+            }
+            cout << "=> Tong so sinh vien trong lop: " << countSV << "\n";
+        }
+    }
+
+    void viewRanking(QuanLyThi& thi)
+    {
+        cout << "\n===== BANG XEP HANG (ADMIN) =====\n";
+        cout << "1. Xep hang toan truong\n";
+        cout << "2. Xep hang theo lop\n";
+        cout << "3. Xep hang theo ten bai thi\n";
+        int choice = nhapSo<int>("Chon kieu xep hang: ");
+
+        if (choice == 1)
+        {
+            SetColor(CYAN);
+            cout << "\n===== BANG XEP HANG TOAN TRUONG (CHINH THUC) =====\n";
+            SetColor(WHITE);
+            struct HSScore { string fullName; string className; double score; };
+            vector<HSScore> bxh;
+            for (const auto& hs : students)
+            {
+                double tong = 0;
+                int dem = 0;
+                for (const auto& kq : hs.getDanhSachKetQua())
+                {
+                    if (kq.loaiThi == 1)
+                    {
+                        tong += kq.diem;
+                        dem++;
+                    }
+                }
+                if (dem > 0)
+                    bxh.push_back({ hs.getFullName(), hs.getLop(), tong / dem });
+            }
+            if (bxh.empty())
+            {
+                SetColor(YELLOW);
+                cout << "Chua co du lieu de xep hang!\n";
+                SetColor(WHITE);
+                return;
+            }
+            sort(bxh.begin(), bxh.end(), [](const HSScore& a, const HSScore& b) { return a.score > b.score; });
+            for (int i = 0; i < (int)bxh.size(); i++)
+            {
+                cout << i + 1 << ". Ho ten: " << bxh[i].fullName << " | Lop: " << bxh[i].className << " | Diem TB: " << fixed << setprecision(2) << bxh[i].score << '\n';
+            }
+        }
+        else if (choice == 2)
+        {
+            string tenLop = inputLine("Nhap ten lop can xem bang xep hang: ");
+            SetColor(CYAN);
+            cout << "\n===== BANG XEP HANG LOP: " << tenLop << " (CHINH THUC) =====\n";
+            SetColor(WHITE);
+            struct HSScore { string fullName; string className; double score; };
+            vector<HSScore> bxh;
+            for (const auto& hs : students)
+            {
+                if (hs.getLop() != tenLop) continue;
+                double tong = 0;
+                int dem = 0;
+                for (const auto& kq : hs.getDanhSachKetQua())
+                {
+                    if (kq.loaiThi == 1)
+                    {
+                        tong += kq.diem;
+                        dem++;
+                    }
+                }
+                if (dem > 0)
+                    bxh.push_back({ hs.getFullName(), hs.getLop(), tong / dem });
+            }
+            if (bxh.empty())
+            {
+                SetColor(YELLOW);
+                cout << "Chua co sinh vien nao trong lop " << tenLop << " co diem thi chinh thuc!\n";
+                SetColor(WHITE);
+                return;
+            }
+            sort(bxh.begin(), bxh.end(), [](const HSScore& a, const HSScore& b) { return a.score > b.score; });
+            for (int i = 0; i < (int)bxh.size(); i++)
+            {
+                cout << i + 1 << ". Ho ten: " << bxh[i].fullName << " | Lop: " << bxh[i].className << " | Diem TB: " << fixed << setprecision(2) << bxh[i].score << '\n';
+            }
+        }
+        else if (choice == 3)
+        {
+            string tenBaiThi = inputLine("Nhap ten bai thi can xem xep hang: ");
+            const deThi* de = nullptr;
+            for (const auto& d : thi.getMaDe())
+            {
+                if (d.tenBaiThi == tenBaiThi)
+                {
+                    de = &d;
+                    break;
+                }
+            }
+            if (!de)
+            {
+                SetColor(RED);
+                cout << "Ten bai thi khong ton tai!\n";
+                SetColor(WHITE);
+                return;
+            }
+            SetColor(CYAN);
+            cout << "\n===== BANG XEP HANG BAI THI: " << de->tenBaiThi << " =====\n";
+            SetColor(WHITE);
+            struct HSScore { string fullName; double score; };
+            vector<HSScore> bxh;
+            for (const auto& hs : students)
+            {
+                if (!hs.kiemTraLopDuocThi(*de)) continue;
+                for (const auto& kq : hs.getDanhSachKetQua())
+                {
+                    if (kq.maDe == de->id && kq.loaiThi == 1)
+                    {
+                        bxh.push_back({ hs.getFullName(), kq.diem });
+                        break;
+                    }
+                }
+            }
+            if (bxh.empty())
+            {
+                SetColor(YELLOW);
+                cout << "Chua co ai lam bai thi nay!\n";
+                SetColor(WHITE);
+                return;
+            }
+            sort(bxh.begin(), bxh.end(), [](const HSScore& a, const HSScore& b) { return a.score > b.score; });
+            for (int i = 0; i < (int)bxh.size(); i++)
+            {
+                cout << i + 1 << ". Ho ten: " << bxh[i].fullName << " | Diem: " << fixed << setprecision(2) << bxh[i].score << '\n';
+            }
+        }
+        else
+        {
+            SetColor(RED);
+            cout << "Lua chon khong hop le!\n";
+            SetColor(WHITE);
+        }
+    }
+
+    // ==================== SAVE / LOAD ====================
+    void saveTeachers() const
+    {
+        ofstream fout("giangvien.txt");
+        for (const auto& t : teachers)
+        {
+            string advisorClassName = getAdvisorClassName(t.getId());
+            fout << t.getId() << '|' << t.getUsername() << '|' << t.getPassword() << '|' << t.getFullName()
+                 << '|' << t.getMon() << '|' << t.getTeacherRoleLabel() << '|' << advisorClassName << '\n';
+        }
+        fout.close();
+    }
+
+    void exportRankingToExcel() const
+    {
+        if (ranking.empty())
+        {
+            SetColor(YELLOW);
+            cout << "Chua co du lieu xep hang de xuat!\n";
+            SetColor(WHITE);
+            return;
+        }
+        exportRankingVectorToExcel(ranking);
+    }
+
+    void saveRanking() const
+    {
+        ofstream fout("ranking.txt");
+        for (const auto& r : ranking)
+            fout << r.id << '|' << r.fullName << '|' << r.score << '\n';
+        fout.close();
+        exportRankingVectorToExcel(ranking);
+    }
+
+    void saveStudents() const
+    {
+        int stt = 1;
+        ofstream file("sinhvien_data.txt");
+        for (const auto& s : students)
+        {
+            file << stt++ << "|" << s.getId() << '|' << s.getUsername() << '|' << s.getPassword() << '|' << s.getFullName()
+                 << '|' << s.getLop() << '|' << s.getGioiTinh() << '|' << s.getBirthDay() << '|' << s.getSdt()
+                 << '|' << s.layDiem() << '|' << s.layMaGV() << '|' << diemMonToString(s.getDiemMon())
+                 << '|' << fixed << setprecision(2) << s.tinhDiemTBChinhThuc() << '\n';
+        }
+        file.close();
+    }
+
+    void saveStudentsReadable() const
+    {
+        ofstream file("sinhvien_report.txt");
+        for (const auto& s : students)
+        {
+            file << "[HS] " << s.getFullName() << "\n";
+            file << "| Lop: " << s.getLop() << "\n";
+            file << "| Gioi tinh: " << s.getGioiTinh() << "\n";
+            file << "| Ngay sinh: " << s.getBirthDay() << "\n";
+            file << "| SDT: " << s.getSdt() << "\n\n";
+            if (!s.getDiemMon().empty())
+            {
+                file << "| Diem mon:\n";
+                for (const auto& p : s.getDiemMon())
+                {
+                    file << "    " << p.first << ": " << fixed << setprecision(2) << p.second << "\n";
+                }
+                file << "\n";
+            }
+            file << "| Diem TB tat ca mon: " << fixed << setprecision(2) << s.tinhDiemTBTatCaMon() << "\n";
+            file << "| Hoc luc: " << s.getHocLuc() << "\n";
+            file << "| TeacherID: " << s.layMaGV() << "\n\n";
+            file << string(52, '=') << "\n\n";
+        }
+        file.close();
+    }
+
+    void saveData() const
+    {
+        saveStudents();
+        saveStudentsReadable();
+        saveTeachers();
+        saveClasses();
+        saveRooms();
+        saveRanking();
+        saveKetQua();
+        cout << "Luu du lieu thanh cong.\n";
+    }
+
+    void loadStudents(const string& fileName)
+    {
+        students.clear();
+        ifstream fin(fileName);
+        if (!fin) return;
+
+        string line;
+        while (getline(fin, line))
+        {
+            if (!line.empty() && line.back() == '\r') line.pop_back();
+            if (line.empty()) continue;
+            stringstream ss(line);
+            vector<string> tk; string t;
+            while (getline(ss, t, '|')) tk.push_back(t);
+            if (tk.size() < 11)
+            {
+                continue;
+            }
+
+            SinhVien s;
+            int idx = 1;
+            s.setId(safeStoi(tk[idx++]));
+            s.setUsername(tk[idx++]);
+            s.setPassword(tk[idx++]);
+            s.setFullName(tk[idx++]);
+            s.setlopChuNhiem(tk[idx++]);
+            s.setGioiTinh(tk[idx++]);
+            s.setBirthDay(tk[idx++]);
+            s.setSdt(tk[idx++]);
+            s.setDiemTB(safeStod(tk[idx++]));
+            s.setTeacherId(safeStoi(tk[idx++]));
+            if (idx < (int)tk.size())
+            {
+                s.setDiemMon(parseDiemMonString(tk[idx++]));
+            }
+            students.push_back(s);
+        }
+        fin.close();
+        cout << "Tai danh sach sinh vien thanh cong.\n";
+    }
+
+    void loadStudentsFromReadableFormat(const string& fileName)
+    {
+        students.clear();
+        ifstream fin(fileName);
+        if (!fin) return;
+
+        string line;
+        SinhVien s;
+        bool inStudent = false;
+        vector<pair<string, double>> diemMon;
+        int studentId = 1;
+        
+        while (getline(fin, line))
+        {
+            if (!line.empty() && line.back() == '\r') line.pop_back();
+
+            string trimmed = trimString(line);
+            
+            if (trimmed.empty()) continue;
+
+            if (trimmed.find("[HS]") == 0)
+            {
+                if (inStudent && s.getId() > 0)
+                {
+                    if (!diemMon.empty())
+                    {
+                        s.setDiemMon(diemMon);
+                    }
+                    double tb = 0;
+                    if (!diemMon.empty())
+                    {
+                        for (const auto& p : diemMon) tb += p.second;
+                        tb /= diemMon.size();
+                        tb = round(tb * 100.0) / 100.0;
+                    }
+                    s.setDiemTB(tb);
+                    students.push_back(s);
+                }
+
+                inStudent = true;
+                diemMon.clear();
+                s = SinhVien();
+                s.setId(studentId++);
+                s.setUsername("user" + to_string(s.getId()));
+                s.setPassword("pass" + to_string(s.getId()));
+                
+                string hoTen = trimmed.substr(5);
+                hoTen = trimString(hoTen);
+                s.setFullName(hoTen);
+            }
+            else if (trimmed.find("| Lop:") == 0)
+            {
+                string lop = trimmed.substr(6);
+                s.setlopChuNhiem(trimString(lop));
+            }
+            else if (trimmed.find("| Gioi tinh:") == 0)
+            {
+                string gt = trimmed.substr(12);
+                s.setGioiTinh(trimString(gt));
+            }
+            else if (trimmed.find("| Ngay sinh:") == 0)
+            {
+                string ns = trimmed.substr(12);
+                s.setBirthDay(trimString(ns));
+            }
+            else if (trimmed.find("| SDT:") == 0)
+            {
+                string sdt = trimmed.substr(6);
+                s.setSdt(trimString(sdt));
+            }
+            else if (trimmed.find("| TeacherID:") == 0)
+            {
+                string tid = trimmed.substr(12);
+                s.setTeacherId(safeStoi(trimString(tid), 0));
+            }
+            else if (inStudent && trimmed.find(":") != string::npos && trimmed.find("|") == string::npos)
+            {
+                size_t colonPos = trimmed.rfind(':');
+                string monName = trimmed.substr(0, colonPos);
+                string diemStr = trimmed.substr(colonPos + 1);
+                monName = trimString(monName);
+                diemStr = trimString(diemStr);
+                double diem = safeStod(diemStr, 0.0);
+                if (!monName.empty()) diemMon.emplace_back(monName, diem);
+            }
+        }
+
+        if (inStudent && s.getId() > 0)
+        {
+            if (!diemMon.empty())
+            {
+                s.setDiemMon(diemMon);
+                double tb = 0;
+                for (const auto& p : diemMon) tb += p.second;
+                tb /= diemMon.size();
+                tb = round(tb * 100.0) / 100.0;
+                s.setDiemTB(tb);
+            }
+            students.push_back(s);
+        }
+
+        fin.close();
+        cout << "Tai danh sach sinh vien (readable format) thanh cong. Tong: " << students.size() << " HS.\n";
+    }
+
+    void loadTeachers(const string& fileName)
+    {
+        teachers.clear();
+        ifstream fin(fileName);
+        if (!fin) return;
+
+        string line;
+        while (getline(fin, line))
+        {
+            if (!line.empty() && line.back() == '\r') line.pop_back();
+            if (line.empty()) continue;
+            stringstream ss(line);
+            vector<string> tk; string t;
+            while (getline(ss, t, '|')) tk.push_back(t);
+            if (tk.size() < 5) continue;
+
+            GiangVien tObj;
+            tObj.setId(safeStoi(tk[0]));
+            tObj.setUsername(tk[1]);
+            tObj.setPassword(tk[2]);
+            tObj.setFullName(tk[3]);
+            tObj.setMon(tk[4]);
+            if (tk.size() >= 6)
+                tObj.setTeacherRole(tk[5]);
+            else
+                tObj.setTeacherRole("BoMon");
+            tObj.normalizeTeacherRole();
+            if (tk.size() >= 7)
+                tObj.setAdvisorClass(tk[6]);
+            else
+                tObj.setAdvisorClass("");
+            teachers.push_back(tObj);
+        }
+        fin.close();
+        cout << "Tai danh sach giang vien thanh cong.\n";
+    }
+
+    void saveClasses() const
+    {
+        int stt = 1;
+
+        ofstream fout("lophoc.txt");
+        for (const auto& c : classes)
+        {
+            fout << stt++
+             << "| ID lop: " << c.id
+             << " | Ten lop: " << c.className
+             << " |" << c.coVanHocTapId
+             << "|" << c.studentCount
+             << "|";
+
+            for (int i = 0; i < (int)c.danhSachGiangVien.size(); i++)
+            {
+                fout << c.danhSachGiangVien[i];
+                if (i + 1 < (int)c.danhSachGiangVien.size())
+                    fout << ',';
+            }
+            fout << '\n';
+        }
+        fout.close();
+    }
+
+    void loadClasses(const string& fileName)
+    {
+        classes.clear();
+        ifstream fin(fileName);
+        if (!fin) return;
+        string line;
+        while (getline(fin, line))
+        {
+            if (!line.empty() && line.back() == '\r') line.pop_back();
+            if (line.empty()) continue;
+            stringstream ss(line);
+            vector<string> tk; string t;
+            while (getline(ss, t, '|')) tk.push_back(t);
+            if (tk.size() < 5) continue;
+
+            ClassInfo c;
+            int idx = 1;
+
+            string rawId = tk[idx++];
+
+            size_t posId = rawId.find(":");
+
+            if (posId != string::npos)
+            {
+                c.id = trimString(rawId.substr(posId + 1));
+            }
+            else
+            {
+                c.id = trimString(rawId);
+            }
+            string rawName = tk[idx++];
+
+            size_t posName = rawName.find(":");
+
+            if (posName != string::npos)
+            {
+                c.className = trimString(rawName.substr(posName + 1));
+            }
+            else
+            {
+                c.className = trimString(rawName);
+            }
+            c.coVanHocTapId = safeStoi(tk[idx++]);
+            c.studentCount = safeStoi(tk[idx++]);
+
+            if (tk.size() >= 6 && !tk[idx].empty())
+            {
+                stringstream ssTeachers(tk[idx]);
+                string teacherToken;
+                while (getline(ssTeachers, teacherToken, ','))
+                {
+                    if (!teacherToken.empty())
+                        c.danhSachGiangVien.push_back(safeStoi(teacherToken));
+                }
+            }
+
+            classes.push_back(c);
+        }
+            // Sanitize: ensure each teacher is advisor of at most one class
+            unordered_set<int> seenAdvisors;
+            for (auto &c2 : classes)
+            {
+                if (c2.coVanHocTapId != 0)
+                {
+                    if (seenAdvisors.find(c2.coVanHocTapId) == seenAdvisors.end())
+                    {
+                        seenAdvisors.insert(c2.coVanHocTapId);
+                    }
+                    else
+                    {
+                        // Duplicate advisor found; remove assignment from this class
+                        cout << "Canh bao: Giang vien ID " << c2.coVanHocTapId << " duoc danh cho nhieu lop. Bo gan cho lop " << c2.className << "\n";
+                        c2.coVanHocTapId = 0;
+                    }
+                }
+            }
+            recalcTotalStudents();
+        fin.close();
+    }
+
+    void loadRanking()
+    {
+        ranking.clear();
+        ifstream fin("ranking.txt");
+        if (!fin) return;
+
+        string line;
+        while (getline(fin, line))
+        {
+            if (!line.empty() && line.back() == '\r') line.pop_back();
+            if (line.empty()) continue;
+            stringstream ss(line);
+            vector<string> tk; string t;
+            while (getline(ss, t, '|')) tk.push_back(t);
+            if (tk.size() < 3) continue;
+
+            RankItem r;
+            r.id = safeStoi(tk[0]);
+            r.fullName = tk[1];
+            r.score = safeStod(tk[2]);
+            ranking.push_back(r);
+        }
+        sortRanking();
+    }
+
+    void loadData(QuanLyThi& thi)
+    {
+        cout << "Chon file sinh vien...\n";
+        string studentFile = taiFile();
+        if (!studentFile.empty()) loadStudents(studentFile);
+        else cout << "Khong chon file sinh vien!\n";
+
+        cout << "Chon file giang vien...\n";
+        string teacherFile = taiFile();
+        if (!teacherFile.empty()) loadTeachers(teacherFile);
+        else cout << "Khong chon file giang vien!\n";
+
+        cout << "Chon file lop hoc...\n";
+        string classFile = taiFile();
+        if (!classFile.empty()) loadClasses(classFile);
+        else cout << "Khong chon file lop hoc!\n";
+
+        cout << "Chon file phong thi...\n";
+        string roomFile = taiFile();
+        if (!roomFile.empty()) loadRooms(roomFile);
+        else cout << "Khong chon file phong thi!\n";
+
+        loadRanking();
+        loadKetQua();
+        thi.loadDeThi();
+        recalcTotalStudents();
+        cout << "Tai du lieu thanh cong.\n";
+    }
+
+    // ==================== SEARCH STUDENT ====================
+    void searchStudent() const
+    {
+        cout << "\n===== TIM KIEM SINH VIEN =====\n";
+        cout << "1. Tim theo ID\n2. Tim theo ho ten\n3. Tim theo lop\n";
+        int choice = nhapSo<int>("Chon: ");
+        bool found = false;
+
+        if (choice == 1)
+        {
+            int id = nhapSo<int>("Nhap ID sinh vien: ");
+            for (const auto& hs : students)
+            {
+                if (hs.getId() == id)
+                {
+                    hs.hienThiThongTin();
+                    found = true;
+                }
+            }
+        }
+        else if (choice == 2)
+        {
+            string ten = inputLine("Nhap ho ten (hoac mot phan): ");
+            string tenLower = ten;
+            transform(tenLower.begin(), tenLower.end(), tenLower.begin(), ::tolower);
+            for (const auto& hs : students)
+            {
+                string nameLower = hs.getFullName();
+                transform(nameLower.begin(), nameLower.end(), nameLower.begin(), ::tolower);
+                if (nameLower.find(tenLower) != string::npos)
+                {
+                    hs.hienThiThongTin();
+                    found = true;
+                }
+            }
+        }
+        else if (choice == 3)
+        {
+            string lop = inputLine("Nhap ten lop: ");
+            for (const auto& hs : students)
+            {
+                if (hs.getLop() == lop)
+                {
+                    hs.hienThiThongTin();
+                    found = true;
+                }
+            }
+        }
+        else
+        {
+            cout << "Lua chon khong hop le.\n";
+            return;
+        }
+
+        if (!found)
+        {
+            SetColor(YELLOW);
+            cout << "Khong tim thay sinh vien nao.\n";
+            SetColor(WHITE);
+        }
+    }
+
+    // ==================== FIND EXAM ROOMS ====================
+    void findExamRooms() const
+    {
+        cout << "\n===== TIM PHONG THI =====\n";
+        if (examRooms.empty())
+        {
+            cout << "Chua co phong thi nao.\n";
+            return;
+        }
+        cout << "1. Tim theo ID\n2. Tim theo ten phong\n3. Tim phong chua khoa\n";
+        int choice = nhapSo<int>("Chon: ");
+        bool found = false;
+
+        if (choice == 1)
+        {
+            int id = nhapSo<int>("Nhap ID phong thi: ");
+            for (const auto& r : examRooms)
+            {
+                if (r.id == id)
+                {
+                    cout << "ID: " << r.id << " | Ten phong: " << r.tenPhong
+                        << " | Suc chua: " << r.sucChua
+                        << " | Trang thai: " << (r.locked ? "Khoa" : "Mo") << '\n';
+                    found = true;
+                }
+            }
+        }
+        else if (choice == 2)
+        {
+            string ten = inputLine("Nhap ten phong (hoac mot phan): ");
+            string tenLower = ten;
+            transform(tenLower.begin(), tenLower.end(), tenLower.begin(), ::tolower);
+            for (const auto& r : examRooms)
+            {
+                string nameLower = r.tenPhong;
+                transform(nameLower.begin(), nameLower.end(), nameLower.begin(), ::tolower);
+                if (nameLower.find(tenLower) != string::npos)
+                {
+                    cout << "ID: " << r.id << " | Ten phong: " << r.tenPhong
+                        << " | Suc chua: " << r.sucChua
+                        << " | Trang thai: " << (r.locked ? "Khoa" : "Mo") << '\n';
+                    found = true;
+                }
+            }
+        }
+        else if (choice == 3)
+        {
+            for (const auto& r : examRooms)
+            {
+                if (!r.locked)
+                {
+                    cout << "ID: " << r.id << " | Ten phong: " << r.tenPhong
+                        << " | Suc chua: " << r.sucChua << '\n';
+                    found = true;
+                }
+            }
+        }
+        else
+        {
+            cout << "Lua chon khong hop le.\n";
+            return;
+        }
+
+        if (!found)
+        {
+            SetColor(YELLOW);
+            cout << "Khong tim thay phong thi nao.\n";
+            SetColor(WHITE);
+        }
+    }
+
+    // ==================== MENU ====================
+    void adminMenu(QuanLyThi& thi)
+    {
+        int choice;
+        do
+        {
+            SetColor(LIGHT_CYAN);
+            cout << "\n╔═════════════════════════════════════════════╗\n";
+            SetColor(LIGHT_YELLOW);
+            cout << "║              MENU ADMIN TESTPRO             ║\n";
+            SetColor(LIGHT_CYAN);
+            cout << "╠═════════════════════════════════════════════╣\n";
+            SetColor(LIGHT_GREEN);
+            cout << "║ [1]  Them giang vien                        ║\n";
+            cout << "║ [2]  Xoa giang vien                         ║\n";
+            cout << "║ [3]  Sua giang vien                         ║\n";
+            cout << "║ [4]  Xem danh sach giang vien               ║\n";
+            SetColor(LIGHT_CYAN);
+            cout << "╠═════════════════════════════════════════════╣\n";
+            SetColor(LIGHT_BLUE);
+            cout << "║ [5]  Them lop                               ║\n";
+            cout << "║ [6]  Xoa lop                                ║\n";
+            cout << "║ [7]  Sua lop                                ║\n";
+            cout << "║ [8]  Xem danh sach lop                      ║\n";
+            SetColor(LIGHT_CYAN);
+            cout << "╠═════════════════════════════════════════════╣\n";
+            SetColor(LIGHT_MAGENTA);
+            cout << "║ [9]  Thong ke sinh vien / giang vien        ║\n";
+            cout << "║ [10] Xuat bao cao thi (CSV)                 ║\n";
+            SetColor(LIGHT_CYAN);
+            cout << "╠═════════════════════════════════════════════╣\n";
+            SetColor(LIGHT_YELLOW);
+            cout << "║ [11] Luu du lieu                            ║\n";
+            cout << "║ [12] Tai du lieu                            ║\n";
+            cout << "║ [13] Tim kiem sinh vien                     ║\n";
+            cout << "║ [14] Xem Bang xep hang                      ║\n";
+            cout << "║ [15] Quan ly phong thi                      ║\n";
+            SetColor(LIGHT_GREEN);
+            cout << "║ [16] Xuat bang xep hang (Excel)             ║\n";
+            SetColor(LIGHT_RED);
+            cout << "║ [0]  Thoat                                  ║\n";
+            SetColor(LIGHT_CYAN);
+            cout << "╚═════════════════════════════════════════════╝\n";
+
+            SetColor(WHITE);
+            choice = nhapSo<int>("Chon chuc nang: ");
+
+            switch (choice)
+            {
+            case 1:
+                addTeacher();
+                break;
+            case 2:
+                deleteTeacher();
+                break;
+            case 3:
+                editTeacher();
+                break;
+            case 4:
+                viewTeachers();
+                break;
+            case 5:
+                addClass();
+                break;
+            case 6: deleteClass(); break;
+            case 7: editClass(); break;
+            case 8: viewClasses(); break;
+            case 9: viewSystemStatistics(); break;
+            case 10: exportExamReportCSV(thi); break;
+            case 11: saveData(); thi.saveDeThi(); break;
+            case 12: loadData(thi); break;
+            case 13: searchStudent(); break;
+            case 14: viewRanking(thi); break;
+            case 15: manageExamRooms(thi); break;
+            case 16: exportRankingToExcel(); break;
+            case 0: cout << "Thoat chuong trinh.\n"; break;
+            default: cout << "Lua chon khong hop le.\n";
+            }
+        } while (choice != 0);
+    }
+};
+
+void drawLine(int color)
+{
+    SetColor(color);
+    cout << "====================================================\n";
+    SetColor(WHITE);
+}
